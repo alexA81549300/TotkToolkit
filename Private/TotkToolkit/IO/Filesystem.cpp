@@ -173,7 +173,7 @@ namespace TotkToolkit::IO {
 
 	std::shared_ptr<Formats::IO::Stream> Filesystem::GetReadStream(std::string filepath) {
 		PHYSFS_File* file = PHYSFS_openRead(filepath.c_str());
-		if (file == nullptr)
+		if (file == nullptr && (file = PHYSFS_openRead(std::filesystem::path(filepath).replace_extension(std::string("b") + std::filesystem::path(filepath).extension().string().substr(1)).string().c_str())) == nullptr)
 			return nullptr;
 		std::shared_ptr<TotkToolkit::IO::Streams::Physfs::Physfs> stream = std::make_shared<TotkToolkit::IO::Streams::Physfs::Physfs>(file);
 

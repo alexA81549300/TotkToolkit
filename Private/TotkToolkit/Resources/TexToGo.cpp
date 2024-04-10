@@ -9,7 +9,7 @@ namespace TotkToolkit::Resources {
     }
 
     std::shared_ptr<Formats::Resources::TXTG::TXTG> TexToGo::GetTXTG(std::string name) {
-        std::string filepath = "romfs/TexToGo/" + name + ".txtg";
+        std::string filepath = "Work/TexToGo/" + name + ".txtg";
 
         if (mCache.contains(filepath)) {
             return mCache.at(filepath);

@@ -3,7 +3,7 @@
 #include <imgui.h>
 
 namespace TotkToolkit::UI::ImGuiUtil {
-	void TextCentered(const char* fmt, float min, float max) {
+	inline void TextCentered(const char* fmt, float min, float max) {
 		float availWidth = max - min;
 
 		float textWidth = ImGui::CalcTextSize(fmt).x;
@@ -12,7 +12,7 @@ namespace TotkToolkit::UI::ImGuiUtil {
 		ImGui::Text(fmt);
 	}
 
-	void TextCenteredWrapped(const char* fmt, float min, float max) {
+	inline void TextCenteredWrapped(const char* fmt, float min, float max) {
 		char* line = new char[strlen(fmt) + 1];
 		memset(line, '\0', strlen(fmt) + 1);
 		unsigned int lineIndex = 0;

@@ -16,11 +16,12 @@
 #include <backends/imgui_impl_glfw.cpp> // Same with this one
 
 #include <TotkToolkit/UI/MainWindow.h>
-#include <TotkToolkit/UI/Windows/Rendering/Viewport.h>
+#include <TotkToolkit/UI/Items/Windows/Rendering/Viewport.h>
 #include <TotkToolkit/Rendering/RenderingSystem.h>
 #include <TotkToolkit/UI/EditorSystem.h>
 #include <TotkToolkit/UI/ErrorSystem.h>
 #include <TotkToolkit/UI/Fonts.h>
+#include <TotkToolkit/Configuration/Settings.h>
 #include <TotkToolkit/IO/Filesystem.h>
 
 #include <fstream>
@@ -286,9 +287,10 @@ int main()
 
     TotkToolkit::UI::MainWindow mainWindow;
 
-    TotkToolkit::UI::Windows::Rendering::Viewport viewport("Viewport (TEST WINDOW)", nullptr);
+    TotkToolkit::UI::Items::Windows::Rendering::Viewport viewport("Viewport (TEST WINDOW)", nullptr);
 
     TotkToolkit::IO::Filesystem::Init();
+    TotkToolkit::Configuration::Settings::Init();
     TotkToolkit::UI::EditorSystem::Init();
     TotkToolkit::UI::ErrorSystem::Init();
 

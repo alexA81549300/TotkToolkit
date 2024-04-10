@@ -5,11 +5,11 @@
 #include <imgui.h>
 
 // TODO: Actually implement file opening system.
-#include <TotkToolkit/UI/Windows/Editors/BYML.h>
+#include <TotkToolkit/UI/Items/Windows/Editors/Texts/BYML.h>
 #include <TotkToolkit/IO/Filesystem.h>
 
 namespace TotkToolkit::UI {
-    MainWindow::MainWindow() : TotkToolkit::UI::ImGuiItem::ImGuiItem(), mBrowser(&mBrowserOpen), mSettings(&mSettingsOpen), mStyle(&mStyleOpen) {
+    MainWindow::MainWindow() : TotkToolkit::UI::Item(), mBrowser(&mBrowserOpen), mSettings(&mSettingsOpen), mStyle(&mStyleOpen) {
         TotkToolkit::Messaging::NoticeBoard::AddReceiver(this);
     }
 
@@ -41,7 +41,7 @@ namespace TotkToolkit::UI {
         if (mStyleOpen)
             mStyle.Draw();
 
-        for (std::shared_ptr<TotkToolkit::UI::Window> window : mEditors) {
+        for (std::shared_ptr<TotkToolkit::UI::Items::Window> window : mEditors) {
             window->Draw();
         }
     }

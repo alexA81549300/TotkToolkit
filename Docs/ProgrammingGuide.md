@@ -13,7 +13,7 @@ The concept of "public" and "private" classes, functions, and data is not a new 
 For organizational purposes, all namespaces match the folders the file is in, and vice versa. This can result in very long namespaces, however I don't consider that a problem. With modern monitor widths, I find it more important to carry that information than to have a compact line of code.
 
 #### Parent/Child Class File Structure
-This one's super simple! In simple cases where you need a parent class and several child classes that extend only from it, this pattern often applies. The idea is that the parent class file should be located next to a folder containing the children class files. An example is `UI/Window.h` and `UI/Windows/`.
+This one's super simple! In simple cases where you need a parent class and several child classes that extend only from it, this pattern often applies. The idea is that the parent class file should be located next to a folder containing the children class files. An example is `UI/Items/Window.h` and `UI/Items/Windows/`.
 There are more complicated examples that do not fully follow this idea, such as `Messaging/Receiver.h` and `Messaging/ExternalReceivers/`, but for simple cases it's a pattern to follow.
 
 
