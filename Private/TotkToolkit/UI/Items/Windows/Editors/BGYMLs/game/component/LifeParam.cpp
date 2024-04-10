@@ -2,8 +2,8 @@
 
 #include <TotkToolkit/UI/Items/Filesystem/FileHolder.h>
 #include <TotkToolkit/UI/Items/Filesystem/File.h>
-#include <Formats/Resources/BYML/Nodes/StringHash.h>;
-#include <Formats/Resources/BYML/Nodes/String.h>;
+#include <Formats/Resources/BYML/Nodes/StringHash.h>
+#include <Formats/Resources/BYML/Nodes/String.h>
 #include "imgui.h"
 
 namespace TotkToolkit::UI::Items::Windows::Editors::BGYMLs::game::component {
@@ -44,7 +44,7 @@ namespace TotkToolkit::UI::Items::Windows::Editors::BGYMLs::game::component {
 		TotkToolkit::UI::Items::Windows::Editors::BGYML::DrawContents();
 
 
-		std::shared_ptr<Formats::Resources::BYML::Nodes::StringHash> stringHash = std::dynamic_pointer_cast<Formats::Resources::BYML::Nodes::StringHash>(mBYML->GetRoot());
+		std::shared_ptr<Formats::Resources::BYML::Nodes::StringHash> stringHash = mBYML->GetRoot()->AsStringHash();
 		if (stringHash == nullptr)
 			return;
 

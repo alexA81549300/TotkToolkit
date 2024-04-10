@@ -3,7 +3,7 @@
 #include <TotkToolkit/Resource.h>
 
 #include <TotkToolkit/IO/FileHandle.h>
-#include <TotkTOolkit/Resources/BYML.h>
+#include <TotkToolkit/Resources/BYML.h>
 #include <Formats/Resources/BYML/BYML.h>
 #include <string>
 #include <memory>

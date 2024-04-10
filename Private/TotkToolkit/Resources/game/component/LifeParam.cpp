@@ -14,35 +14,37 @@ namespace TotkToolkit::Resources::game::component {
 		return Parse_();
 	}
 	bool LifeParam::Parse_() {
-		std::shared_ptr<Formats::Resources::BYML::Nodes::StringHash> stringHash = std::dynamic_pointer_cast<Formats::Resources::BYML::Nodes::StringHash>(mBYML->GetRoot());
+		std::shared_ptr<Formats::Resources::BYML::Nodes::StringHash> stringHash = mBYML->GetRoot()->AsStringHash();
 		if (stringHash == nullptr)
 			return false;
 
 		if (stringHash->HasKey("$parent")) {
 			std::shared_ptr<Formats::Resources::BYML::Node> node = (*stringHash)["$parent"];
-			std::shared_ptr<Formats::Resources::BYML::Nodes::String> string = std::dynamic_pointer_cast<Formats::Resources::BYML::Nodes::String>(node);
+			std::shared_ptr<Formats::Resources::BYML::Nodes::String> string = node->AsString();
 			mParent = string->AsStdString();
 		}
 		if (stringHash->HasKey("DamageParameters")) {
 			std::shared_ptr<Formats::Resources::BYML::Node> node = (*stringHash)["DamageParameters"];
-			std::shared_ptr<Formats::Resources::BYML::Nodes::String> string = std::dynamic_pointer_cast<Formats::Resources::BYML::Nodes::String>(node);
+			std::shared_ptr<Formats::Resources::BYML::Nodes::String> string = node->AsString();
 			mDamageParameters = string->AsStdString();
 		}
 		if (stringHash->HasKey("LifeParameters")) {
 			std::shared_ptr<Formats::Resources::BYML::Node> node = (*stringHash)["LifeParameters"];
-			std::shared_ptr<Formats::Resources::BYML::Nodes::String> string = std::dynamic_pointer_cast<Formats::Resources::BYML::Nodes::String>(node);
+			std::shared_ptr<Formats::Resources::BYML::Nodes::String> string = node->AsString();
 			mLifeParameters = string->AsStdString();
 		}
 
 		if (stringHash->HasKey("InitInvincibilityType")) {
 			std::shared_ptr<Formats::Resources::BYML::Node> node = (*stringHash)["InitInvincibilityType"];
-			std::shared_ptr<Formats::Resources::BYML::Nodes::String> string = std::dynamic_pointer_cast<Formats::Resources::BYML::Nodes::String>(node);
+			std::shared_ptr<Formats::Resources::BYML::Nodes::String> string = node->AsString();
 			mInitInvincibilityType = string->AsStdString();
 		}
+
+		return true;
 	}
 
 	bool LifeParam::Serialize() {
-		std::shared_ptr<Formats::Resources::BYML::Nodes::StringHash> stringHash = std::dynamic_pointer_cast<Formats::Resources::BYML::Nodes::StringHash>(mBYML->GetRoot());
+		std::shared_ptr<Formats::Resources::BYML::Nodes::StringHash> stringHash = mBYML->GetRoot()->AsStringHash();
 		(*stringHash)["$parent"] = mBYML->GetStringTable()->GetStringNode(mBYML->GetStringTable()->AddString(mParent));
 		(*stringHash)["DamageParameters"] = mBYML->GetStringTable()->GetStringNode(mBYML->GetStringTable()->AddString(mDamageParameters));
 		(*stringHash)["LifeParameters"] = mBYML->GetStringTable()->GetStringNode(mBYML->GetStringTable()->AddString(mLifeParameters));

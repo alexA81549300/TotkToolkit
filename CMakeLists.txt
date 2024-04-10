@@ -115,7 +115,17 @@ if (SWITCH)
 
     message(STATUS "SRC DIR: ${CMAKE_CURRENT_SOURCE_DIR}")
     message(STATUS "BIN DIR: ${CMAKE_CURRENT_BINARY_DIR}")
-    file(COPY ${PORTLIBS}/include/GLFW ${PORTLIBS}/include/KHR ${PORTLIBS}/include/EGL DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/PortlibsInclude)
+    
+    # TOTKTOOLKIT_TODO: Figure out exactly what needs to be copied.
+    if (EXISTS ${PORTLIBS}/include/GLFW)
+        file(COPY ${PORTLIBS}/include/GLFW ${CMAKE_CURRENT_BINARY_DIR}/PortlibsInclude)
+    endif()
+    if (EXISTS ${PORTLIBS}/include/KHR)
+    file(COPY ${PORTLIBS}/include/KHR DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/PortlibsInclude)
+    endif()
+    if (EXISTS ${PORTLIBS}/include/EGL)
+    file(COPY ${PORTLIBS}/include/EGL DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/PortlibsInclude)
+    endif()
 
     # Include PORTLIBS
     target_include_directories(glfw PUBLIC 
