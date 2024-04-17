@@ -25,3 +25,6 @@
 [submodule "Lib/ASTC-Encoder"]
 	path = Lib/ASTC-Encoder
 	url = https://github.com/nintenstudio/astc-encoder.git
+[submodule "Lib/Switch-CMake"]
+	path = Lib/Switch-CMake
+	url = https://github.com/nintenstudio/switch-cmake.git
