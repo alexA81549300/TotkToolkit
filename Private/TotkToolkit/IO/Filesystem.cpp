@@ -153,7 +153,7 @@ namespace TotkToolkit::IO {
 	}
 
 	void Filesystem::Mount(std::string path, std::string mountPoint, bool notifyFileChange) {
-		AddPHYSFSCall(std::make_shared<TotkToolkit::IO::PHYSFSCalls::Mount>(path, mountPoint, true, notifyFileChange));
+		AddPHYSFSCall(std::make_shared<TotkToolkit::IO::PHYSFSCalls::Mount>(path, mountPoint, false, notifyFileChange));
 		ExecutePHYSFSCallQueue();
 	}
 	void Filesystem::MountStream(std::shared_ptr<Formats::IO::Stream> stream, std::string filename, std::string mountPoint, bool notifyFileChange) {
@@ -172,21 +172,38 @@ namespace TotkToolkit::IO {
 	}
 
 	std::shared_ptr<Formats::IO::Stream> Filesystem::GetReadStream(std::string filepath) {
+		std::shared_ptr<Formats::IO::Stream> res;
+		
+		// Temporarily mount the write dir for reading.
+		// This is done here so its always at the end of the search path.
+		// Using raw PHYSFS call because this is undone on return.
+		if (PHYSFS_getWriteDir() != nullptr)
+			PHYSFS_mount(PHYSFS_getWriteDir(), "", false);
+		
 		PHYSFS_File* file = PHYSFS_openRead(filepath.c_str());
-		if (file == nullptr && (file = PHYSFS_openRead(std::filesystem::path(filepath).replace_extension(std::string("b") + std::filesystem::path(filepath).extension().string().substr(1)).string().c_str())) == nullptr)
-			return nullptr;
-		std::shared_ptr<TotkToolkit::IO::Streams::Physfs::Physfs> stream = std::make_shared<TotkToolkit::IO::Streams::Physfs::Physfs>(file);
-
-		if (stream != nullptr && filepath.ends_with(".zs")) {
-			// TOTKTOOLKIT_TODO_FUNCTIONAL: Check for zstandard compression signature.
-			std::shared_ptr<Formats::IO::Stream> decompressed = Formats::Resources::ZSTD::ZSTDBackend::Decompress(stream);
-			if (decompressed != nullptr)
-				return decompressed;
-			return nullptr; // Not sure what to do here.. filename ends in zs but either can't be decompressed or isn't compressed.
+		if (file == nullptr && (file = PHYSFS_openRead(std::filesystem::path(filepath).replace_extension(std::string("b") + std::filesystem::path(filepath).extension().string().substr(1)).string().c_str())) == nullptr) {
+			res = nullptr;
 		}
 		else {
-			return stream;
+			std::shared_ptr<TotkToolkit::IO::Streams::Physfs::Physfs> stream = std::make_shared<TotkToolkit::IO::Streams::Physfs::Physfs>(file);
+
+			if (stream != nullptr && filepath.ends_with(".zs")) {
+				// TOTKTOOLKIT_TODO_FUNCTIONAL: Check for zstandard compression signature.
+				std::shared_ptr<Formats::IO::Stream> decompressed = Formats::Resources::ZSTD::ZSTDBackend::Decompress(stream);
+				if (decompressed != nullptr)
+					res = decompressed;
+				else
+					res = nullptr; // Not sure what to do here.. filename ends in zs but either can't be decompressed or isn't compressed.
+			}
+			else {
+				res = stream;
+			}
 		}
+
+		// The write dir's mount was temporary, remember?
+		if (PHYSFS_getWriteDir() != nullptr)
+			PHYSFS_unmount(PHYSFS_getWriteDir());
+		return res;
 	}
 	std::shared_ptr<Formats::IO::Stream> Filesystem::GetWriteStream(std::string filepath) {
 		PHYSFS_mkdir(std::filesystem::path(filepath).parent_path().generic_string().c_str());

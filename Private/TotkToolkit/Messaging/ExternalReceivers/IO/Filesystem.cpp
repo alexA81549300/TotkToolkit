@@ -1,8 +1,10 @@
 #include <TotkToolkit/Messaging/ExternalReceivers/IO/Filesystem.h>
 
 #include <TotkToolkit/IO/Filesystem.h>
+#include <TotkToolkit/Messaging/NoticeBoard.h>
 #include <TotkToolkit/Messaging/Notices/Configuration/Settings/Change/DumpDir.h>
 #include <TotkToolkit/Messaging/Notices/Configuration/Settings/Change/WriteDir.h>
+#include <TotkToolkit/Messaging/Notices/IO/Filesystem/Mount/Romfs.h>
 #include <Formats/Resources/ZSTD/ZSTDBackend.h>
 #include <filesystem>
 
@@ -32,6 +34,8 @@ namespace TotkToolkit::Messaging::ExternalReceivers::IO {
 						if (PackZsDic != nullptr)
 							Formats::Resources::ZSTD::ZSTDBackend::AddDict(PackZsDic);
 					}
+
+					TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_unique<TotkToolkit::Messaging::Notices::IO::Filesystem::Mount::Romfs>());
 					return;
 				}
 			case TotkToolkit::Messaging::NoticeType::CONFIGURATION_SETTINGS_CHANGE_WRITEDIR: {

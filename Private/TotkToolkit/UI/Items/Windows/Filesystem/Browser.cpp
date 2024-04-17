@@ -156,7 +156,7 @@ namespace TotkToolkit::UI::Items::Windows::Filesystem {
     std::shared_ptr<std::atomic<bool>> futureContinueCondition;
     void Browser::HandleNotice(std::shared_ptr<TotkToolkit::Messaging::Notice> notice) {
         switch (notice->mType) {
-            case TotkToolkit::Messaging::NoticeType::CONFIGURATION_SETTINGS_CHANGE_DUMPDIR: {
+            case TotkToolkit::Messaging::NoticeType::IO_FILESYSTEM_MOUNT_ROMFS: {
                 std::shared_ptr<TotkToolkit::Messaging::Notices::Configuration::Settings::Change::DumpDir> castNotice = std::static_pointer_cast<TotkToolkit::Messaging::Notices::Configuration::Settings::Change::DumpDir>(notice);
 
                 if (futureContinueCondition)
