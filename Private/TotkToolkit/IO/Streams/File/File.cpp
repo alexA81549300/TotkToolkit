@@ -39,6 +39,11 @@ namespace TotkToolkit::IO::Streams::File {
 		pos = (pos % alignment == 0) ? pos : alignment - (pos % alignment) + pos;
 		Seek(pos);
 	}
+
+	bool File::Flush() {
+		mFile->flush();
+	}
+
 	std::string File::ReadZeroTerminatedString(F_U32 allocation) {
 		std::string res;
 		res.reserve(allocation);

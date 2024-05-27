@@ -12,8 +12,8 @@ namespace TotkToolkit::IO {
 
 		bool IsNull();
 
-		std::shared_ptr<Formats::IO::Stream> GetReadStream();
-		std::shared_ptr<Formats::IO::Stream> GetWriteStream();
+		std::shared_ptr<Formats::IO::Stream> OpenReadStream();
+		std::shared_ptr<Formats::IO::Stream> OpenWriteStream();
 
 	protected:
 		std::string mPath;

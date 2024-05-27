@@ -50,7 +50,13 @@ namespace TotkToolkit::Resources::game::component {
 		(*stringHash)["LifeParameters"] = mBYML->GetStringTable()->GetStringNode(mBYML->GetStringTable()->AddString(mLifeParameters));
 		(*stringHash)["InitInvincibilityType"] = mBYML->GetStringTable()->GetStringNode(mBYML->GetStringTable()->AddString(mInitInvincibilityType));
 
-		mBYML->SetStream(mFileHandle.GetWriteStream());
-		return mBYML->Serialize();
+		std::shared_ptr<Formats::IO::Stream> writeStream = mFileHandle.OpenWriteStream();
+
+		mBYML->SetStream(writeStream);
+		if (!mBYML->Serialize())
+			return false;
+		writeStream->Flush();
+
+		return true;
 	}
 }

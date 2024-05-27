@@ -25,12 +25,15 @@ namespace TotkToolkit::IO::Streams::Physfs {
 	class Physfs : public Formats::IO::Stream {
 	public:
 		Physfs(PHYSFS_File* file);
+		~Physfs();
 
 		virtual void Seek(std::streampos pos) override;
 		virtual void PushSeek(std::streampos pos) override;
 		virtual std::streampos PopSeek() override;
 		virtual std::streampos GetSeek() override;
 		virtual void AlignSeek(std::streampos alignment) override;
+
+		virtual bool Flush() override;
 
 		virtual std::string ReadZeroTerminatedString(F_U32 allocation = FORMATS_IO_STREAM_READ_STRING_DEFAULTALLOCATION) override;
 		virtual void WriteZeroTerminatedString(std::string value) override;

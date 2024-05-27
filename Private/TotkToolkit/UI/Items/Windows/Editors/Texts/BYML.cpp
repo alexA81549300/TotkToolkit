@@ -8,7 +8,7 @@ namespace TotkToolkit::UI::Items::Windows::Editors::Texts {
 	}
 
 	bool BYML::Parse() {
-		mBYML = Formats::Resources::BYML::BYML::Factory(mFileHandle.GetReadStream());
+		mBYML = Formats::Resources::BYML::BYML::Factory(mFileHandle.OpenReadStream());
 		if (mBYML == nullptr)
 			return false;
 
@@ -20,7 +20,7 @@ namespace TotkToolkit::UI::Items::Windows::Editors::Texts {
 
 	bool BYML::Serialize() {
 		mBYML->LoadYAML(mTextEditor.GetText());
-		mBYML->SetStream(mFileHandle.GetWriteStream());
+		mBYML->SetStream(mFileHandle.OpenWriteStream());
 		return mBYML->Serialize();
 	}
 }

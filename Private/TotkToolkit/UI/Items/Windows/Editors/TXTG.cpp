@@ -29,7 +29,7 @@ namespace TotkToolkit::UI::Items::Windows::Editors {
 		if (mTXTG == nullptr) {
 			if (mFileHandle.IsNull())
 				return false;
-			mTXTG = Formats::Resources::TXTG::TXTG::Factory(mFileHandle.GetReadStream());
+			mTXTG = Formats::Resources::TXTG::TXTG::Factory(mFileHandle.OpenReadStream());
 			if (mTXTG == nullptr)
 				return false;
 		}
@@ -64,7 +64,7 @@ namespace TotkToolkit::UI::Items::Windows::Editors {
 	}
 
 	bool TXTG::Serialize() {
-		mTXTG->SetStream(mFileHandle.GetWriteStream());
+		mTXTG->SetStream(mFileHandle.OpenWriteStream());
 		return mTXTG->Serialize();
 	}
 }

@@ -38,6 +38,8 @@ namespace TotkToolkit::IO::Streams::File {
 		virtual std::streampos GetSeek() override;
 		virtual void AlignSeek(std::streampos alignment) override;
 
+		virtual bool Flush() override;
+
 		virtual std::string ReadZeroTerminatedString(F_U32 allocation = FORMATS_IO_STREAM_READ_STRING_DEFAULTALLOCATION) override;
 		virtual void WriteZeroTerminatedString(std::string value) override;
 

@@ -9,7 +9,7 @@ namespace TotkToolkit::Resources {
 		return Parse_();
 	}
 	bool BGYML::Parse_() {
-		mBYML = Formats::Resources::BYML::BYML::Factory(mFileHandle.GetReadStream());
+		mBYML = Formats::Resources::BYML::BYML::Factory(mFileHandle.OpenReadStream());
 		if (mBYML == nullptr)
 			return false;
 
@@ -17,7 +17,7 @@ namespace TotkToolkit::Resources {
 	}
 
 	bool BGYML::Serialize() {
-		mBYML->SetStream(mFileHandle.GetWriteStream());
+		mBYML->SetStream(mFileHandle.OpenWriteStream());
 		return mBYML->Serialize();
 	}
 }

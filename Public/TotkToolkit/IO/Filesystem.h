@@ -21,8 +21,8 @@ namespace TotkToolkit::IO {
 		static void Unmount(std::string path, bool notifyFileChange = true);
 		static void SetWriteDir(std::string dir);
 
-		static std::shared_ptr<Formats::IO::Stream> GetReadStream(std::string filepath);
-		static std::shared_ptr<Formats::IO::Stream> GetWriteStream(std::string filepath);
+		static std::shared_ptr<Formats::IO::Stream> OpenReadStream(std::string filepath);
+		static std::shared_ptr<Formats::IO::Stream> OpenWriteStream(std::string filepath);
 		static std::string GetRealDir(std::string path);
 
 		static std::vector<std::string> EnumerateFiles(std::string path);

@@ -9,6 +9,9 @@ namespace TotkToolkit::IO::Streams::Physfs {
 	Physfs::Physfs(PHYSFS_File* file) : mFile(file) {
 
 	}
+	Physfs::~Physfs() {
+		PHYSFS_close(mFile);
+	}
 
 	void Physfs::Seek(std::streampos pos) {
 		PHYSFS_seek(mFile, pos);
@@ -34,6 +37,12 @@ namespace TotkToolkit::IO::Streams::Physfs {
 		pos = (pos % alignment == 0) ? pos : alignment - (pos % alignment) + pos;
 		PHYSFS_seek(mFile, pos);
 	}
+	
+	bool Physfs::Flush() {
+		PHYSFS_flush(mFile);
+		return true;
+	}
+
 	std::string Physfs::ReadZeroTerminatedString(F_U32 allocation) {
 		std::string res;
 		res.reserve(allocation);

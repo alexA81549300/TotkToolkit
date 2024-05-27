@@ -171,7 +171,7 @@ namespace TotkToolkit::IO {
 		ExecutePHYSFSCallQueue();
 	}
 
-	std::shared_ptr<Formats::IO::Stream> Filesystem::GetReadStream(std::string filepath) {
+	std::shared_ptr<Formats::IO::Stream> Filesystem::OpenReadStream(std::string filepath) {
 		std::shared_ptr<Formats::IO::Stream> res;
 		
 		// Temporarily mount the write dir for reading.
@@ -205,7 +205,7 @@ namespace TotkToolkit::IO {
 			PHYSFS_unmount(PHYSFS_getWriteDir());
 		return res;
 	}
-	std::shared_ptr<Formats::IO::Stream> Filesystem::GetWriteStream(std::string filepath) {
+	std::shared_ptr<Formats::IO::Stream> Filesystem::OpenWriteStream(std::string filepath) {
 		PHYSFS_mkdir(std::filesystem::path(filepath).parent_path().generic_string().c_str());
 		PHYSFS_File* file = PHYSFS_openWrite(filepath.c_str());
 		return std::make_shared<TotkToolkit::IO::Streams::Physfs::Physfs>(file);

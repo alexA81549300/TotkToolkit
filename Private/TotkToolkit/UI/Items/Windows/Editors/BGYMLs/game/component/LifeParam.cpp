@@ -2,6 +2,7 @@
 
 #include <TotkToolkit/UI/Items/Filesystem/FileHolder.h>
 #include <TotkToolkit/UI/Items/Filesystem/File.h>
+#include <TotkToolkit/IO/Filesystem.h>
 #include <Formats/Resources/BYML/Nodes/StringHash.h>
 #include <Formats/Resources/BYML/Nodes/String.h>
 #include "imgui.h"
