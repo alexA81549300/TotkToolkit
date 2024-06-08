@@ -19,13 +19,14 @@ namespace TotkToolkit::Threading::Tasks::IO::Filesystem {
         TotkToolkit::IO::Filesystem::InitThread();
         TotkToolkit::IO::Filesystem::SyncThread();
         std::vector<std::string> packPaths = TotkToolkit::IO::Filesystem::SearchFilenamesByExtension("", ".pack.zs", mContinueCondition); // Equivilent to regex search for R"(\.pack\.zs$)" but faster
+        packPaths.append_range(TotkToolkit::IO::Filesystem::SearchFilenamesByExtension("", ".pack", mContinueCondition)); // Equivilent to regex search for R"(\.pack\.zs$)" but faster
         for (std::string packPath : packPaths) {
             if (!*mContinueCondition)
                 return;
 
             std::shared_ptr<Formats::IO::Stream> pack = TotkToolkit::IO::Filesystem::OpenReadStream(packPath);
             if (pack != nullptr)
-                TotkToolkit::IO::Filesystem::MountStream(pack, std::filesystem::path(packPath).filename().generic_string(), "Work", false);
+                TotkToolkit::IO::Filesystem::MountStream(pack, std::filesystem::path(packPath).relative_path().generic_string(), "Work", false);
             mTaskReport->AddProgress(1.f / packPaths.size());
         }
 

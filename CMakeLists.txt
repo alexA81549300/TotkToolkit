@@ -118,7 +118,7 @@ if (SWITCH)
     
     # TOTKTOOLKIT_TODO: Figure out exactly what needs to be copied.
     if (EXISTS ${PORTLIBS}/include/GLFW)
-        file(COPY ${PORTLIBS}/include/GLFW ${CMAKE_CURRENT_BINARY_DIR}/PortlibsInclude)
+        file(COPY ${PORTLIBS}/include/GLFW DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/PortlibsInclude)
     endif()
     if (EXISTS ${PORTLIBS}/include/KHR)
     file(COPY ${PORTLIBS}/include/KHR DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/PortlibsInclude)

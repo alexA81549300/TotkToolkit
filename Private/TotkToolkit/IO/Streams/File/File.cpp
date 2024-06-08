@@ -42,6 +42,7 @@ namespace TotkToolkit::IO::Streams::File {
 
 	bool File::Flush() {
 		mFile->flush();
+		return mFile->good();
 	}
 
 	std::string File::ReadZeroTerminatedString(F_U32 allocation) {

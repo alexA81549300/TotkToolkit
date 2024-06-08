@@ -60,6 +60,7 @@ void BindCurrentThreadContext() {
 		PHYSFS_initContext(context, "");
 		PHYSFS_bindContext(context);
 		PHYSFS_permitSymbolicLinks(true); // We trust our user. Plus, it helps with performance by eliminating checks in PHYSFS
+		PHYSFS_permitDanglingWriteHandles(true); // Necessary for writing to multiple write dirs.
 		PHYSFS_registerArchiver(&archiver_sarc_default);
 	{
 		std::unique_lock<std::shared_mutex> lock(lsThreadContextsMutex);
@@ -171,6 +172,8 @@ namespace TotkToolkit::IO {
 		ExecutePHYSFSCallQueue();
 	}
 
+	// TOTKTOOLKIT_TODO_FUNCTIONAL: Implement ZSTD on a physfs level to save hella memory
+	std::map<std::string, std::shared_ptr<Formats::IO::Stream>> packZstdStreamCache;
 	std::shared_ptr<Formats::IO::Stream> Filesystem::OpenReadStream(std::string filepath) {
 		std::shared_ptr<Formats::IO::Stream> res;
 		
@@ -188,12 +191,19 @@ namespace TotkToolkit::IO {
 			std::shared_ptr<TotkToolkit::IO::Streams::Physfs::Physfs> stream = std::make_shared<TotkToolkit::IO::Streams::Physfs::Physfs>(file);
 
 			if (stream != nullptr && filepath.ends_with(".zs")) {
-				// TOTKTOOLKIT_TODO_FUNCTIONAL: Check for zstandard compression signature.
-				std::shared_ptr<Formats::IO::Stream> decompressed = Formats::Resources::ZSTD::ZSTDBackend::Decompress(stream);
-				if (decompressed != nullptr)
-					res = decompressed;
-				else
-					res = nullptr; // Not sure what to do here.. filename ends in zs but either can't be decompressed or isn't compressed.
+				// TOTKTOOLKIT_TODO_FUNCTIONAL: Check for zstandard compression signature. // NAH do it all at physfs actually
+				if (packZstdStreamCache.contains(filepath)) {
+					res = packZstdStreamCache.at(filepath);
+				}
+				else {
+					std::shared_ptr<Formats::IO::Stream> decompressed = Formats::Resources::ZSTD::ZSTDBackend::Decompress(stream);
+					if (decompressed != nullptr) {
+						res = decompressed;
+						packZstdStreamCache.insert(std::make_pair(filepath, decompressed));
+					}
+					else
+						res = nullptr; // Not sure what to do here.. filename ends in zs but either can't be decompressed or isn't compressed.
+				}
 			}
 			else {
 				res = stream;
@@ -206,8 +216,31 @@ namespace TotkToolkit::IO {
 		return res;
 	}
 	std::shared_ptr<Formats::IO::Stream> Filesystem::OpenWriteStream(std::string filepath) {
+		std::filesystem::path realDir = std::filesystem::proximate(std::filesystem::path(GetRealDir(filepath)), "Work");
+		PHYSFS_mkdir(realDir.parent_path().generic_string().c_str());
+		
+		const char** test;
+		int test2;
+		PHYSFS_getRealDirs(filepath.c_str(), &test, &test2);
+
+		// Create the file
+		PHYSFS_File* realDirFile = PHYSFS_openWrite("test.sarc");
+		PHYSFS_close(realDirFile);
+
+		// Test 1
+		std::string oldWriteDir = PHYSFS_getWriteDir();
+
+		// Test 2
+		PHYSFS_setWriteDir((std::filesystem::path(oldWriteDir) / "test.sarc").generic_string().c_str());
+
+		// Do whatever this is
 		PHYSFS_mkdir(std::filesystem::path(filepath).parent_path().generic_string().c_str());
+
+		// Open the file in the new context
 		PHYSFS_File* file = PHYSFS_openWrite(filepath.c_str());
+
+		//PHYSFS_setWriteDir(oldWriteDir.c_str());
+
 		return std::make_shared<TotkToolkit::IO::Streams::Physfs::Physfs>(file);
 	}
 	std::string Filesystem::GetRealDir(std::string path) {
