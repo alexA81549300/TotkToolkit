@@ -8,6 +8,7 @@
 #include <TotkToolkit/IO/PHYSFSCalls/SetWriteDir.h>
 #include <TotkToolkit/IO/PHYSFSCall.h>
 #include <TotkToolkit/IO/Streams/Physfs/Physfs.h>
+#include <TotkToolkit/IO/Streams/Multi/Multi.h>
 #include <Formats/Resources/ZSTD/ZSTDBackend.h>
 #include <archiver_sarc.h>
 #include <physfs.h>
@@ -188,7 +189,7 @@ namespace TotkToolkit::IO {
 			res = nullptr;
 		}
 		else {
-			std::shared_ptr<TotkToolkit::IO::Streams::Physfs::Physfs> stream = std::make_shared<TotkToolkit::IO::Streams::Physfs::Physfs>(file);
+			std::shared_ptr<TotkToolkit::IO::Streams::Physfs::Physfs> stream = std::make_shared<TotkToolkit::IO::Streams::Physfs::Physfs>(file, false);
 
 			if (stream != nullptr && filepath.ends_with(".zs")) {
 				// TOTKTOOLKIT_TODO_FUNCTIONAL: Check for zstandard compression signature. // NAH do it all at physfs actually
@@ -216,35 +217,55 @@ namespace TotkToolkit::IO {
 		return res;
 	}
 	std::shared_ptr<Formats::IO::Stream> Filesystem::OpenWriteStream(std::string filepath) {
-		std::filesystem::path realDir = std::filesystem::proximate(std::filesystem::path(GetRealDir(filepath)), "Work");
-		PHYSFS_mkdir(realDir.parent_path().generic_string().c_str());
+		std::filesystem::path proximatedFilepath = std::filesystem::proximate(std::filesystem::path(filepath), "Work");
 		
-		const char** test;
-		int test2;
-		PHYSFS_getRealDirs(filepath.c_str(), &test, &test2);
+		std::vector<std::string> realDirs = GetRealDirs(filepath);
+		std::vector<std::shared_ptr<Formats::IO::Stream>> streams;
+		streams.reserve(realDirs.size());
 
-		// Create the file
-		PHYSFS_File* realDirFile = PHYSFS_openWrite("test.sarc");
-		PHYSFS_close(realDirFile);
+		for (std::string realDir : realDirs) {
+			std::filesystem::path proximatedRealDir = std::filesystem::proximate(std::filesystem::path(realDir), "Work");
+			PHYSFS_mkdir(proximatedRealDir.parent_path().generic_string().c_str());
 
-		// Test 1
-		std::string oldWriteDir = PHYSFS_getWriteDir();
+			// Create the file
+			PHYSFS_File* realDirFile = PHYSFS_openWrite(proximatedRealDir.generic_string().c_str());
+			PHYSFS_close(realDirFile);
 
-		// Test 2
-		PHYSFS_setWriteDir((std::filesystem::path(oldWriteDir) / "test.sarc").generic_string().c_str());
+			// Write dir juggling
+			std::string oldWriteDir = PHYSFS_getWriteDir();
 
-		// Do whatever this is
-		PHYSFS_mkdir(std::filesystem::path(filepath).parent_path().generic_string().c_str());
+			// Set the new write dir to our archive
+			PHYSFS_setWriteDir((std::filesystem::path(oldWriteDir) / proximatedRealDir).generic_string().c_str());
 
-		// Open the file in the new context
-		PHYSFS_File* file = PHYSFS_openWrite(filepath.c_str());
+			// Make all the directories we need
+			PHYSFS_mkdir(proximatedFilepath.parent_path().generic_string().c_str());
 
-		//PHYSFS_setWriteDir(oldWriteDir.c_str());
+			// Open the file in the new context
+			PHYSFS_File* file = PHYSFS_openWrite(proximatedFilepath.generic_string().c_str());
 
-		return std::make_shared<TotkToolkit::IO::Streams::Physfs::Physfs>(file);
+			// Write dir juggling
+			PHYSFS_setWriteDir(oldWriteDir.c_str());
+
+			streams.push_back(std::make_shared<TotkToolkit::IO::Streams::Physfs::Physfs>(file, true));
+		}
+		
+
+		return std::make_shared<TotkToolkit::IO::Streams::Multi::Multi>(streams);
 	}
 	std::string Filesystem::GetRealDir(std::string path) {
 		return PHYSFS_getRealDir(path.c_str());
+	}
+	std::vector<std::string> Filesystem::GetRealDirs(std::string path) {
+		std::vector<std::string> res;
+
+		const char** realDirs;
+		int realDirsLength;
+		PHYSFS_getRealDirs(path.c_str(), &realDirs, &realDirsLength);
+		res.reserve(realDirsLength);
+		for (int i = 0; i < realDirsLength; i++)
+			res.push_back(realDirs[i]);
+
+		return res;
 	}
 
 	std::vector<std::string> Filesystem::EnumerateFiles(std::string path) {

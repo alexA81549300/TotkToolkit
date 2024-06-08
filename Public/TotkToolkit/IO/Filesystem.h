@@ -24,6 +24,7 @@ namespace TotkToolkit::IO {
 		static std::shared_ptr<Formats::IO::Stream> OpenReadStream(std::string filepath);
 		static std::shared_ptr<Formats::IO::Stream> OpenWriteStream(std::string filepath);
 		static std::string GetRealDir(std::string path);
+		static std::vector<std::string> GetRealDirs(std::string path);
 
 		static std::vector<std::string> EnumerateFiles(std::string path);
 		static std::vector<std::string> EnumerateDirectories(std::string path);

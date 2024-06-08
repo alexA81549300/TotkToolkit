@@ -17,7 +17,10 @@ namespace TotkToolkit::Resources {
 	}
 
 	bool BGYML::Serialize() {
+		std::shared_ptr<Formats::IO::Stream> oldStream = mBYML->GetStream();
 		mBYML->SetStream(mFileHandle.OpenWriteStream());
-		return mBYML->Serialize();
+		bool success = mBYML->Serialize();
+		mBYML->SetStream(oldStream);
+		return success;
 	}
 }

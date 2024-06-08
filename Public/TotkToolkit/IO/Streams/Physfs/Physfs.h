@@ -24,7 +24,7 @@ namespace TotkToolkit::IO::Streams::Physfs::EndianReaders {
 namespace TotkToolkit::IO::Streams::Physfs {
 	class Physfs : public Formats::IO::Stream {
 	public:
-		Physfs(PHYSFS_File* file);
+		Physfs(PHYSFS_File* file, bool forWriting);
 		~Physfs();
 
 		virtual void Seek(std::streampos pos) override;
@@ -89,6 +89,7 @@ namespace TotkToolkit::IO::Streams::Physfs {
 		std::shared_ptr<Formats::IO::EndianReader> mEndianReader;
 
 		PHYSFS_File* mFile;
+		bool mForWriting;
 		std::vector<std::streampos> mSeekStack;
 
 		friend class TotkToolkit::IO::Streams::Physfs::EndianReaders::Little;

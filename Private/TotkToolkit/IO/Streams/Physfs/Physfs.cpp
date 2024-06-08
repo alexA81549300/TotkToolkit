@@ -6,20 +6,30 @@
 #include <cassert>
 
 namespace TotkToolkit::IO::Streams::Physfs {
-	Physfs::Physfs(PHYSFS_File* file) : mFile(file) {
+	Physfs::Physfs(PHYSFS_File* file, bool forWriting) : mFile(file), mForWriting(forWriting) {
 
 	}
 	Physfs::~Physfs() {
 		PHYSFS_close(mFile);
 	}
 
-	void Physfs::Seek(std::streampos pos) {
+	void Physfs::Seek(std::streampos pos) 
+	{
+		if (mForWriting) {
+			PHYSFS_sint64 fileLength = PHYSFS_fileLength(mFile);
+			if (pos > fileLength) {
+				PHYSFS_seek(mFile, fileLength);
+				F_U8* buf = new F_U8[(PHYSFS_sint64)pos - (fileLength - 1)];
+				PHYSFS_writeBytes(mFile, buf, (PHYSFS_sint64)pos - (fileLength - 1));
+				delete[] buf;
+			}
+		}
 		PHYSFS_seek(mFile, pos);
 	}
 	void Physfs::PushSeek(std::streampos pos) {
 		mSeekStack.push_back(PHYSFS_tell(mFile));
 
-		PHYSFS_seek(mFile, pos);
+		Seek(pos);
 	}
 	std::streampos Physfs::PopSeek() {
 		std::streampos res = PHYSFS_tell(mFile);

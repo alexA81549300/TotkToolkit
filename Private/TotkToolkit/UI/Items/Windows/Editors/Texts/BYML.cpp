@@ -20,7 +20,11 @@ namespace TotkToolkit::UI::Items::Windows::Editors::Texts {
 
 	bool BYML::Serialize() {
 		mBYML->LoadYAML(mTextEditor.GetText());
+
+		std::shared_ptr<Formats::IO::Stream> oldStream = mBYML->GetStream();
 		mBYML->SetStream(mFileHandle.OpenWriteStream());
-		return mBYML->Serialize();
+		bool success = mBYML->Serialize();
+		mBYML->SetStream(oldStream);
+		return success;
 	}
 }
