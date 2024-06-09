@@ -11,6 +11,8 @@
 #include <TotkToolkit/Messaging/NoticeBoard.h>
 #include <TotkToolkit/Messaging/Notices/Configuration/Settings/Change/DumpDir.h>
 #include <TotkToolkit/Messaging/Notices/IO/Filesystem/FilesChange.h>
+#include <TotkToolkit/Messaging/Notices/IO/Filesystem/Mount/Romfs.h>
+#include <TotkToolkit/Messaging/Notices/IO/Filesystem/Mount/WriteDir.h>
 #include <TotkToolkit/Messaging/Notices/Errors/UI/Items/Windows/Editor/ParseFailed.h>
 #include <Formats/Aliases/Primitives.h>
 #include <Fallback/shared_ptr_atomic.h>
@@ -157,7 +159,7 @@ namespace TotkToolkit::UI::Items::Windows::Filesystem {
     void Browser::HandleNotice(std::shared_ptr<TotkToolkit::Messaging::Notice> notice) {
         switch (notice->mType) {
             case TotkToolkit::Messaging::NoticeType::IO_FILESYSTEM_MOUNT_ROMFS: {
-                std::shared_ptr<TotkToolkit::Messaging::Notices::Configuration::Settings::Change::DumpDir> castNotice = std::static_pointer_cast<TotkToolkit::Messaging::Notices::Configuration::Settings::Change::DumpDir>(notice);
+                std::shared_ptr<TotkToolkit::Messaging::Notices::IO::Filesystem::Mount::Romfs> castNotice = std::static_pointer_cast<TotkToolkit::Messaging::Notices::IO::Filesystem::Mount::Romfs>(notice);
 
                 if (futureContinueCondition)
                     *futureContinueCondition = false;
@@ -167,6 +169,19 @@ namespace TotkToolkit::UI::Items::Windows::Filesystem {
                 TotkToolkit::IO::Filesystem::SyncThread();
                 sMountArchivesTask = std::make_shared<TotkToolkit::Threading::Tasks::IO::Filesystem::MountArchives>([this]() -> void {/*sMountArchivesTask.store(nullptr);*/ }, futureContinueCondition);
                 future = std::async(std::launch::async, []() -> void {sMountArchivesTask.load()->Execute();});
+                return;
+            }
+            case TotkToolkit::Messaging::NoticeType::IO_FILESYSTEM_MOUNT_WRITEDIR: {
+                std::shared_ptr<TotkToolkit::Messaging::Notices::IO::Filesystem::Mount::WriteDir> castNotice = std::static_pointer_cast<TotkToolkit::Messaging::Notices::IO::Filesystem::Mount::WriteDir>(notice);
+
+                if (futureContinueCondition)
+                    *futureContinueCondition = false;
+                futureContinueCondition = std::make_shared<std::atomic<bool>>(true);
+
+                TotkToolkit::IO::Filesystem::InitThread();
+                TotkToolkit::IO::Filesystem::SyncThread();
+                sMountArchivesTask = std::make_shared<TotkToolkit::Threading::Tasks::IO::Filesystem::MountArchives>([this]() -> void {/*sMountArchivesTask.store(nullptr);*/ }, futureContinueCondition);
+                future = std::async(std::launch::async, []() -> void {sMountArchivesTask.load()->Execute(); });
                 return;
             }
             case TotkToolkit::Messaging::NoticeType::IO_FILESYSTEM_FILESCHANGE: {

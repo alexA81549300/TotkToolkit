@@ -140,6 +140,26 @@ PHYSFS_EnumerateCallbackResult searchFilenamesByExtensionCallback(void *data, co
 	return PHYSFS_EnumerateCallbackResult::PHYSFS_ENUM_OK;
 }
 
+
+class MountHandle : public TotkToolkit::IO::PHYSFSCall {
+public:
+	MountHandle(PHYSFS_File* handle, std::string mountPoint, std::string newDir, bool appendToPath, bool notifyFileChange = true) : mHandle(handle), mMountPoint(mountPoint), mNewDir(newDir), mAppendToPath(appendToPath), mNotifyFileChange(notifyFileChange) {
+
+	}
+
+	virtual void Execute() override {
+		if (PHYSFS_mountHandle(mHandle, mNewDir.c_str(), mMountPoint.c_str(), mAppendToPath) && mNotifyFileChange)
+			TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_shared<TotkToolkit::Messaging::Notices::IO::Filesystem::FilesChange>());
+	}
+
+protected:
+	PHYSFS_File* mHandle;
+	std::string mMountPoint;
+	std::string mNewDir;
+	bool mAppendToPath;
+	bool mNotifyFileChange;
+};
+
 namespace TotkToolkit::IO {
 	void Filesystem::Init() {
 		PHYSFS_init("");
@@ -168,9 +188,13 @@ namespace TotkToolkit::IO {
 		AddPHYSFSCall(std::make_shared<TotkToolkit::IO::PHYSFSCalls::Unmount>(path, notifyFileChange));
 		ExecutePHYSFSCallQueue();
 	}
+	void Filesystem::SetDumpDir(std::string dir) {
+		mDumpDir = dir;
+	}
 	void Filesystem::SetWriteDir(std::string dir) {
 		AddPHYSFSCall(std::make_shared<TotkToolkit::IO::PHYSFSCalls::SetWriteDir>(dir));
 		ExecutePHYSFSCallQueue();
+		mWriteDir = dir;
 	}
 
 	// TOTKTOOLKIT_TODO_FUNCTIONAL: Implement ZSTD on a physfs level to save hella memory
@@ -223,13 +247,31 @@ namespace TotkToolkit::IO {
 		std::vector<std::shared_ptr<Formats::IO::Stream>> streams;
 		streams.reserve(realDirs.size());
 
+		if (realDirs.size() == 0) // Support new files being created
+			realDirs.push_back(mWriteDir);
+
 		for (std::string realDir : realDirs) {
+			if (std::filesystem::path(realDir).generic_string() == (std::filesystem::path(mDumpDir) / "romfs").generic_string())
+				realDir = mWriteDir;
+
 			std::filesystem::path proximatedRealDir = std::filesystem::proximate(std::filesystem::path(realDir), "Work");
 			PHYSFS_mkdir(proximatedRealDir.parent_path().generic_string().c_str());
 
 			// Create the file
 			PHYSFS_File* realDirFile = PHYSFS_openWrite(proximatedRealDir.generic_string().c_str());
-			PHYSFS_close(realDirFile);
+			PHYSFS_File* romfsRealDirFile = PHYSFS_openRead(realDir.c_str());
+			if (romfsRealDirFile) {
+				std::shared_ptr<Formats::IO::Stream> cachedDecompressedStream = packZstdStreamCache.at(realDir);
+
+				PHYSFS_sint64 len = cachedDecompressedStream->GetBufferLength();
+				F_U8* buf = new F_U8[len];
+				cachedDecompressedStream->ReadBytes(buf, len);
+				cachedDecompressedStream->Seek(0);
+
+				PHYSFS_writeBytes(realDirFile, buf, len);
+				delete[] buf;
+			}
+			//PHYSFS_close(realDirFile);
 
 			// Write dir juggling
 			std::string oldWriteDir = PHYSFS_getWriteDir();
@@ -240,15 +282,17 @@ namespace TotkToolkit::IO {
 			// Make all the directories we need
 			PHYSFS_mkdir(proximatedFilepath.parent_path().generic_string().c_str());
 
-			// Open the file in the new context
+			// Open the file in the new write dir
 			PHYSFS_File* file = PHYSFS_openWrite(proximatedFilepath.generic_string().c_str());
 
 			// Write dir juggling
 			PHYSFS_setWriteDir(oldWriteDir.c_str());
 
+			//AddPHYSFSCall(std::make_shared<MountHandle>(realDirFile, "Work", proximatedRealDir.generic_string().c_str(), 0));
+			//ExecutePHYSFSCallQueue();
+
 			streams.push_back(std::make_shared<TotkToolkit::IO::Streams::Physfs::Physfs>(file, true));
 		}
-		
 
 		return std::make_shared<TotkToolkit::IO::Streams::Multi::Multi>(streams);
 	}
@@ -316,4 +360,6 @@ namespace TotkToolkit::IO {
 	}
 
 	TotkToolkit::Messaging::ExternalReceivers::IO::Filesystem Filesystem::sExternalReceiver;
+	std::string Filesystem::mDumpDir;
+	std::string Filesystem::mWriteDir;
 }

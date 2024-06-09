@@ -19,6 +19,7 @@ namespace TotkToolkit::IO {
 		static void Mount(std::string path, std::string mountPoint, bool notifyFileChange = true);
 		static void MountStream(std::shared_ptr<Formats::IO::Stream> stream, std::string filename, std::string mountPoint, bool notifyFileChange = true);
 		static void Unmount(std::string path, bool notifyFileChange = true);
+		static void SetDumpDir(std::string dir);
 		static void SetWriteDir(std::string dir);
 
 		static std::shared_ptr<Formats::IO::Stream> OpenReadStream(std::string filepath);
@@ -33,5 +34,7 @@ namespace TotkToolkit::IO {
 
 	protected:
 		static TotkToolkit::Messaging::ExternalReceivers::IO::Filesystem sExternalReceiver;
+		static std::string mDumpDir;
+		static std::string mWriteDir;
 	};
 }

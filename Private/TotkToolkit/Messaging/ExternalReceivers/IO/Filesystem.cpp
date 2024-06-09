@@ -5,6 +5,7 @@
 #include <TotkToolkit/Messaging/Notices/Configuration/Settings/Change/DumpDir.h>
 #include <TotkToolkit/Messaging/Notices/Configuration/Settings/Change/WriteDir.h>
 #include <TotkToolkit/Messaging/Notices/IO/Filesystem/Mount/Romfs.h>
+#include <TotkToolkit/Messaging/Notices/IO/Filesystem/Mount/WriteDir.h>
 #include <Formats/Resources/ZSTD/ZSTDBackend.h>
 #include <filesystem>
 
@@ -18,6 +19,7 @@ namespace TotkToolkit::Messaging::ExternalReceivers::IO {
 					TotkToolkit::IO::Filesystem::SyncThread();
 					TotkToolkit::IO::Filesystem::Unmount(castNotice->mOldDumpDir);
 					TotkToolkit::IO::Filesystem::Mount((std::filesystem::path(castNotice->mNewDumpDir) / std::filesystem::path("romfs")).string(), "Work");
+					TotkToolkit::IO::Filesystem::SetDumpDir(castNotice->mNewDumpDir);
 
 					// Initialize ZSTD dictionaries
 					std::shared_ptr<Formats::IO::Stream> ZsDicPack = TotkToolkit::IO::Filesystem::OpenReadStream("Work/Pack/ZsDic.pack.zs");
@@ -44,6 +46,10 @@ namespace TotkToolkit::Messaging::ExternalReceivers::IO {
 					TotkToolkit::IO::Filesystem::InitThread();
 					TotkToolkit::IO::Filesystem::SyncThread();
 					TotkToolkit::IO::Filesystem::SetWriteDir(castNotice->mNewWriteDir);
+					//TotkToolkit::IO::Filesystem::Unmount(castNotice->mOldWriteDir);
+					//TotkToolkit::IO::Filesystem::Mount(castNotice->mNewWriteDir, "Work");
+
+					//TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_unique<TotkToolkit::Messaging::Notices::IO::Filesystem::Mount::WriteDir>());
 					return;
 				}
 			default:
