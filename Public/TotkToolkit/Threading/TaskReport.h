@@ -21,9 +21,14 @@ namespace TotkToolkit::Threading {
 
         void SetMessage(std::string message);
         void AddProgress(F_F32 progress);
+        void DeclareFinished(); // Because of floating point limits, progress wont always be exactly 1 when done.
+        bool IsFinished();
+
+        void AddSubTaskReport(std::shared_ptr<TaskReport> taskReport);
     private:
         std::string mName; std::shared_mutex mNameMutex;
         std::atomic<F_F32> mProgress;
+        std::atomic<bool> mFinished;
         std::atomic<F_U32> mSubTaskNum;
         std::string mMessage; std::shared_mutex mMessageMutex;
         std::vector<std::shared_ptr<TaskReport>> mChildTaskReports; std::shared_mutex mChildTaskReportsMutex;

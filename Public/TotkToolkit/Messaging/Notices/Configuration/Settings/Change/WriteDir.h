@@ -7,7 +7,7 @@
 namespace TotkToolkit::Messaging::Notices::Configuration::Settings::Change {
 	class WriteDir : public TotkToolkit::Messaging::Notice {
 	public:
-		WriteDir(std::string oldWriteDir, std::string newWriteDir);
+		WriteDir(std::string oldWriteDir, std::string newWriteDi);
 
 		std::string mOldWriteDir;
 		std::string mNewWriteDir;

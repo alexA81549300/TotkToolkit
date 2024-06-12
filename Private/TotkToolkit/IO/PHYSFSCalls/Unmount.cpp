@@ -6,7 +6,9 @@
 
 namespace TotkToolkit::IO::PHYSFSCalls {
     void Unmount::Execute() {
-        if (PHYSFS_unmount(mPath.c_str()) && mNotifyFileChange)
-			TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_shared<TotkToolkit::Messaging::Notices::IO::Filesystem::FilesChange>());
+        if (PHYSFS_unmount(mPath.c_str()) && mNotifyFilesChanged && !mNotifiedFilesChanged) {
+            TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_shared<TotkToolkit::Messaging::Notices::IO::Filesystem::FilesChange>());
+            mNotifiedFilesChanged = true;
+        }
     }
 }

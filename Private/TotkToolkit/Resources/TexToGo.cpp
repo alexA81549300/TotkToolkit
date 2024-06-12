@@ -15,7 +15,7 @@ namespace TotkToolkit::Resources {
             return mCache.at(filepath);
         }
         
-        std::shared_ptr<Formats::IO::Stream> stream = TotkToolkit::IO::Filesystem::OpenReadStream(filepath);
+        std::shared_ptr<Formats::IO::Stream> stream = TotkToolkit::IO::Filesystem.OpenReadStream(filepath);
         std::shared_ptr<Formats::Resources::TXTG::TXTG> txtg = Formats::Resources::TXTG::TXTG::Factory(stream);
 
         mCache.insert({filepath, txtg});
@@ -28,7 +28,7 @@ namespace TotkToolkit::Resources {
             return mCache.at(filepath);
         }
         
-        std::shared_ptr<Formats::IO::Stream> stream = TotkToolkit::IO::Filesystem::OpenReadStream(filepath);
+        std::shared_ptr<Formats::IO::Stream> stream = TotkToolkit::IO::Filesystem.OpenReadStream(filepath);
         std::shared_ptr<Formats::Resources::TXTG::TXTG> txtg = Formats::Resources::TXTG::TXTG::Factory(stream);
 
         mCache.insert({filepath, txtg});

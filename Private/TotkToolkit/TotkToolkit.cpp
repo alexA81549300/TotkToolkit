@@ -289,7 +289,7 @@ int main()
 
     TotkToolkit::UI::Items::Windows::Rendering::Viewport viewport("Viewport (TEST WINDOW)", nullptr);
 
-    TotkToolkit::IO::Filesystem::Init();
+    TotkToolkit::IO::Filesystem.Init();
     TotkToolkit::Configuration::Settings::Init();
     TotkToolkit::UI::EditorSystem::Init();
     TotkToolkit::UI::ErrorSystem::Init();

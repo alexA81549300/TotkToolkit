@@ -30,6 +30,5 @@ namespace TotkToolkit::UI::Items::Windows::Filesystem {
         std::vector<TotkToolkit::UI::Items::Filesystem::File> mCurrentFiles; TotkToolkit::Threading::Mutexes::SharedRecursive mCurrentFilesMutex; // Should always be acquired second to avoid deadlock.
         std::vector<std::string> mCurrentDirectories; TotkToolkit::Threading::Mutexes::SharedRecursive mCurrentDirectoriesMutex; // Should always be acquired third to avoid deadlock.
 
-        static std::atomic<std::shared_ptr<TotkToolkit::Threading::Tasks::IO::Filesystem::MountArchives>> sMountArchivesTask; // TOTKTOOLKIT_FUNCTIONAL_CONSIDERATION_THREAD_SAFETY: Our callback modifies this, and that's run on the task thread.
     };
 }

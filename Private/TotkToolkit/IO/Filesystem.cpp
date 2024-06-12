@@ -1,10 +1,17 @@
 #include <TotkToolkit/IO/Filesystem.h>
 
+#include <TotkToolkit/UI/Localization/TranslationSource.h>
 #include <TotkToolkit/Messaging/NoticeBoard.h>
+#include <TotkToolkit/Messaging/Notices/Configuration/Settings/Change/DumpDir.h>
+#include <TotkToolkit/Messaging/Notices/Configuration/Settings/Change/WriteDir.h>
+#include <TotkToolkit/Messaging/Notices/IO/Filesystem/Mount/Romfs.h>
+#include <TotkToolkit/Messaging/Notices/IO/Filesystem/Mount/WriteDir.h>
 #include <TotkToolkit/Messaging/Notices/IO/Filesystem/FilesChange.h>
+#include <TotkToolkit/Threading/Tasks/IO/Filesystem/MountArchives.h>
 #include <TotkToolkit/IO/PHYSFSCalls/Mount.h>
 #include <TotkToolkit/IO/PHYSFSCalls/MountMemory.h>
 #include <TotkToolkit/IO/PHYSFSCalls/Unmount.h>
+#include <TotkToolkit/IO/PHYSFSCalls/Float.h>
 #include <TotkToolkit/IO/PHYSFSCalls/SetWriteDir.h>
 #include <TotkToolkit/IO/PHYSFSCall.h>
 #include <TotkToolkit/IO/Streams/Physfs/Physfs.h>
@@ -14,13 +21,19 @@
 #include <physfs.h>
 #include <filesystem>
 #include <map>
+#include <algorithm>
 #include <vector>
 #include <regex>
 #include <iostream>
 #include <shared_mutex>
 #include <thread>
 
-std::map<std::thread::id, std::vector<std::shared_ptr<TotkToolkit::IO::PHYSFSCall>>> sPHYSFSCallQueue;
+struct PHYSFSCallQueueEntry {
+	std::vector<std::shared_ptr<TotkToolkit::IO::PHYSFSCall>> mCalls;
+	PHYSFS_Context mContext;
+	bool mIsClaimed;
+};
+std::map<std::thread::id, PHYSFSCallQueueEntry> sPHYSFSCallQueue;
 std::shared_mutex sPHYSFSCallQueueMutex;
 std::vector<std::shared_ptr<TotkToolkit::IO::PHYSFSCall>> sEntirePHYSFSCallQueue; // Used to get new threads up-to-date
 std::shared_mutex sEntirePHYSFSCallQueueMutex;
@@ -28,7 +41,7 @@ void AddPHYSFSCall(std::shared_ptr<TotkToolkit::IO::PHYSFSCall> call) {
 	{
 		std::unique_lock<std::shared_mutex> lock(sPHYSFSCallQueueMutex);
 		for (auto& it : sPHYSFSCallQueue) {
-			it.second.push_back(call);
+			it.second.mCalls.push_back(call);
 		}
 	}
 	{
@@ -36,23 +49,59 @@ void AddPHYSFSCall(std::shared_ptr<TotkToolkit::IO::PHYSFSCall> call) {
 		sEntirePHYSFSCallQueue.push_back(call);
 	}
 }
+void ClaimBestPHYSFSContext() {
+	std::unique_lock<std::shared_mutex> lock(sPHYSFSCallQueueMutex);
+	std::thread::id bestThread = std::this_thread::get_id();
+	F_U32 bestThreadCallCount = sPHYSFSCallQueue.contains(bestThread) ? sPHYSFSCallQueue.at(bestThread).mCalls.size() : std::numeric_limits<F_U32>::max();
+	for (auto& it : sPHYSFSCallQueue) {
+		if (!it.second.mIsClaimed) {
+			if (it.second.mCalls.size() < bestThreadCallCount) {
+				bestThread = it.first;
+				bestThreadCallCount = it.second.mCalls.size();
+			}
+		}
+	}
+
+	// This context is the best one, but we've previously abandoned it.
+	if (bestThread == std::this_thread::get_id() && sPHYSFSCallQueue.contains(bestThread) && !sPHYSFSCallQueue.at(bestThread).mIsClaimed) {
+		sPHYSFSCallQueue.at(bestThread).mIsClaimed = true;
+	}
+	else if (bestThread != std::this_thread::get_id()) {
+		// De-init this context if it exists. It's being thrown away.
+		if (sPHYSFSCallQueue.contains(std::this_thread::get_id()))
+			PHYSFS_deinitContext(sPHYSFSCallQueue[std::this_thread::get_id()].mContext);
+
+		// Set the new context.
+		sPHYSFSCallQueue[std::this_thread::get_id()] = sPHYSFSCallQueue.at(bestThread);
+
+		// Mark the context as claimed.
+		sPHYSFSCallQueue[std::this_thread::get_id()].mIsClaimed = true;
+
+		// Erase the new context from where it previously was.
+		sPHYSFSCallQueue.erase(bestThread);
+			
+		// Bind the new context.
+		PHYSFS_bindContext(sPHYSFSCallQueue[std::this_thread::get_id()].mContext);
+	}
+}
+void UnclaimPHYSFSContext() {
+	std::unique_lock<std::shared_mutex> lock(sPHYSFSCallQueueMutex);
+	sPHYSFSCallQueue.at(std::this_thread::get_id()).mIsClaimed = false;
+}
 void ExecutePHYSFSCallQueue() {
 	std::shared_lock<std::shared_mutex> lock(sPHYSFSCallQueueMutex);
-	for (std::shared_ptr<TotkToolkit::IO::PHYSFSCall> call : sPHYSFSCallQueue.at(std::this_thread::get_id())) {
+	for (std::shared_ptr<TotkToolkit::IO::PHYSFSCall> call : sPHYSFSCallQueue.at(std::this_thread::get_id()).mCalls) {
 		call->Execute();
 	}
 
-	sPHYSFSCallQueue.at(std::this_thread::get_id()).clear();
+	sPHYSFSCallQueue.at(std::this_thread::get_id()).mCalls.clear();
 }
 
 void BindCurrentThreadContext() {
-	static std::map<std::thread::id, PHYSFS_Context> lsThreadContexts;
-	static std::shared_mutex lsThreadContextsMutex;
-	
 	{
-		std::shared_lock<std::shared_mutex> lock(lsThreadContextsMutex);
-		if (lsThreadContexts.contains(std::this_thread::get_id())) {
-			PHYSFS_bindContext(lsThreadContexts.at(std::this_thread::get_id()));
+		std::shared_lock<std::shared_mutex> lock(sPHYSFSCallQueueMutex);
+		if (sPHYSFSCallQueue.contains(std::this_thread::get_id())) {
+			PHYSFS_bindContext(sPHYSFSCallQueue.at(std::this_thread::get_id()).mContext);
 			return;
 		}
 	}
@@ -64,13 +113,14 @@ void BindCurrentThreadContext() {
 		PHYSFS_permitDanglingWriteHandles(true); // Necessary for writing to multiple write dirs.
 		PHYSFS_registerArchiver(&archiver_sarc_default);
 	{
-		std::unique_lock<std::shared_mutex> lock(lsThreadContextsMutex);
-		lsThreadContexts.insert({std::this_thread::get_id(), context});
-	}
-	{
 		std::unique_lock<std::shared_mutex> queueLock(sPHYSFSCallQueueMutex);
 		std::shared_lock<std::shared_mutex> entireQueueLock(sEntirePHYSFSCallQueueMutex);
-		sPHYSFSCallQueue.insert({std::this_thread::get_id(), sEntirePHYSFSCallQueue});
+
+		PHYSFSCallQueueEntry entry;
+		entry.mCalls = sEntirePHYSFSCallQueue;
+		entry.mIsClaimed = true; // Default is true, should be set to false when the thread is done with it.
+		entry.mContext = context;
+		sPHYSFSCallQueue.insert({std::this_thread::get_id(), entry });
 	}
 }
 
@@ -141,57 +191,106 @@ PHYSFS_EnumerateCallbackResult searchFilenamesByExtensionCallback(void *data, co
 }
 
 
-class MountHandle : public TotkToolkit::IO::PHYSFSCall {
-public:
-	MountHandle(PHYSFS_File* handle, std::string mountPoint, std::string newDir, bool appendToPath, bool notifyFileChange = true) : mHandle(handle), mMountPoint(mountPoint), mNewDir(newDir), mAppendToPath(appendToPath), mNotifyFileChange(notifyFileChange) {
+namespace TotkToolkit::IO::PHYSFSCalls {
+	class MountHandle : public TotkToolkit::IO::PHYSFSCall {
+	public:
+		MountHandle(PHYSFS_File* handle, std::string mountPoint, std::string newDir, bool appendToPath, std::vector<std::string> floatDirs, bool notifyFilesChanged = true) : mHandle(handle), mMountPoint(mountPoint), mNewDir(newDir), mAppendToPath(appendToPath), mFloatDirs(floatDirs), mNotifyFilesChanged(notifyFilesChanged) {
 
-	}
+		}
 
-	virtual void Execute() override {
-		if (PHYSFS_mountHandle(mHandle, mNewDir.c_str(), mMountPoint.c_str(), mAppendToPath) && mNotifyFileChange)
-			TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_shared<TotkToolkit::Messaging::Notices::IO::Filesystem::FilesChange>());
-	}
+		virtual void Execute() override {
+			int mountSuccess = PHYSFS_mountHandle(mHandle, mNewDir.c_str(), mMountPoint.c_str(), mAppendToPath);
+			for (std::string dir : mFloatDirs) {
+				PHYSFS_moveInSearchPath(dir.c_str(), 0);
+			}
+			if (mountSuccess && mNotifyFilesChanged && !mNotifiedFilesChanged) {
+				TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_shared<TotkToolkit::Messaging::Notices::IO::Filesystem::FilesChange>());
+				mNotifiedFilesChanged = true;
+			}
+		}
 
-protected:
-	PHYSFS_File* mHandle;
-	std::string mMountPoint;
-	std::string mNewDir;
-	bool mAppendToPath;
-	bool mNotifyFileChange;
-};
+	protected:
+		PHYSFS_File* mHandle;
+		std::string mMountPoint;
+		std::string mNewDir;
+		bool mAppendToPath;
+		std::vector<std::string> mFloatDirs;
+		bool mNotifyFilesChanged;
+		bool mNotifiedFilesChanged = false;
+	};
+}
 
 namespace TotkToolkit::IO {
-	void Filesystem::Init() {
+	_Filesystem Filesystem;
+
+	void _Filesystem::Init() {
 		PHYSFS_init("");
-		TotkToolkit::Messaging::NoticeBoard::AddReceiver(&sExternalReceiver);
+		TotkToolkit::Messaging::NoticeBoard::AddReceiver(this);
 	}
 
-	void Filesystem::InitThread() {
+	void _Filesystem::InitThread() {
+		ClaimBestPHYSFSContext(); // See if there's a leftover context to start from
 		BindCurrentThreadContext();
 	}
-
-	void Filesystem::SyncThread() {
-		ExecutePHYSFSCallQueue();
+	void _Filesystem::DeinitThread() {
+		UnclaimPHYSFSContext(); // Make this PHYSFS context avaliable to other threads.
 	}
 
-	void Filesystem::Mount(std::string path, std::string mountPoint, bool notifyFileChange) {
-		AddPHYSFSCall(std::make_shared<TotkToolkit::IO::PHYSFSCalls::Mount>(path, mountPoint, false, notifyFileChange));
+	void _Filesystem::SyncThread() {
+		ClaimBestPHYSFSContext(); // Is there an unused PHYSFS context that's more up-to-date?
+		ExecutePHYSFSCallQueue(); // Go ahead and make sure things are up-to-date.
+	}
+
+	void _Filesystem::Mount(std::string path, std::string mountPoint, bool notifyFileChange, bool deferredFloating) {
+		AddPHYSFSCall(std::make_shared<TotkToolkit::IO::PHYSFSCalls::Mount>(path, mountPoint, false, deferredFloating ? std::vector<std::string>() : mFloatDirs, notifyFileChange));
 		ExecutePHYSFSCallQueue();
 	}
-	void Filesystem::MountStream(std::shared_ptr<Formats::IO::Stream> stream, std::string filename, std::string mountPoint, bool notifyFileChange) {
+	void _Filesystem::MountStream(std::shared_ptr<Formats::IO::Stream> stream, std::string filename, std::string mountPoint, bool notifyFileChange, bool deferredFloating) {
 		std::shared_ptr<F_U8[]> buffer = stream->GetBuffer();
 		F_UT bufferLength = stream->GetBufferLength();
-		AddPHYSFSCall(std::make_shared<TotkToolkit::IO::PHYSFSCalls::MountMemory>(buffer, bufferLength, nullptr, filename, mountPoint, true, notifyFileChange));
+		AddPHYSFSCall(std::make_shared<TotkToolkit::IO::PHYSFSCalls::MountMemory>(buffer, bufferLength, nullptr, filename, mountPoint, true, deferredFloating ? std::vector<std::string>() : mFloatDirs, notifyFileChange));
 		ExecutePHYSFSCallQueue();
 	}
-	void Filesystem::Unmount(std::string path, bool notifyFileChange) {
+	void _Filesystem::Unmount(std::string path, bool notifyFileChange) {
 		AddPHYSFSCall(std::make_shared<TotkToolkit::IO::PHYSFSCalls::Unmount>(path, notifyFileChange));
 		ExecutePHYSFSCallQueue();
 	}
-	void Filesystem::SetDumpDir(std::string dir) {
+	void _Filesystem::Float() {
+		std::shared_lock<std::shared_mutex> floatDirsLock(mFloatDirsMutex);
+		AddPHYSFSCall(std::make_shared<TotkToolkit::IO::PHYSFSCalls::Float>(mFloatDirs));
+		ExecutePHYSFSCallQueue();
+	}
+	// Be very careful with this! Changes must be undone before finishing thread work!
+	bool _Filesystem::TempMount(std::string path, std::string mountPoint) {
+		return PHYSFS_mount(path.c_str(), mountPoint.c_str(), 0);
+	}
+	// Be very careful with this! Changes must be undone before finishing thread work!
+	bool _Filesystem::TempUnmount(std::string path) {
+		return PHYSFS_unmount(path.c_str());
+	}
+	std::string _Filesystem::GetMountPoint(std::string path) {
+		const char* mountPoint = PHYSFS_getMountPoint(path.c_str());
+		if (mountPoint != nullptr)
+			return std::string(mountPoint);
+		else
+			return "";
+	}
+	std::string _Filesystem::GetDumpDir() {
+		std::shared_lock<std::shared_mutex> lock(mDumpDirMutex);
+		return mDumpDir;
+	}
+	void _Filesystem::SetDumpDir(std::string dir) {
+		std::unique_lock<std::shared_mutex> lock(mDumpDirMutex);
+		dir = std::filesystem::path(dir).generic_string(); // Make standard
 		mDumpDir = dir;
 	}
-	void Filesystem::SetWriteDir(std::string dir) {
+	std::string _Filesystem::GetWriteDir() {
+		std::shared_lock<std::shared_mutex> lock(mWriteDirMutex);
+		return mWriteDir;
+	}
+	void _Filesystem::SetWriteDir(std::string dir) {
+		std::unique_lock<std::shared_mutex> lock(mWriteDirMutex);
+		dir = std::filesystem::path(dir).generic_string(); // Make standard
 		AddPHYSFSCall(std::make_shared<TotkToolkit::IO::PHYSFSCalls::SetWriteDir>(dir));
 		ExecutePHYSFSCallQueue();
 		mWriteDir = dir;
@@ -199,14 +298,8 @@ namespace TotkToolkit::IO {
 
 	// TOTKTOOLKIT_TODO_FUNCTIONAL: Implement ZSTD on a physfs level to save hella memory
 	std::map<std::string, std::shared_ptr<Formats::IO::Stream>> packZstdStreamCache;
-	std::shared_ptr<Formats::IO::Stream> Filesystem::OpenReadStream(std::string filepath) {
+	std::shared_ptr<Formats::IO::Stream> _Filesystem::OpenReadStream(std::string filepath) {
 		std::shared_ptr<Formats::IO::Stream> res;
-		
-		// Temporarily mount the write dir for reading.
-		// This is done here so its always at the end of the search path.
-		// Using raw PHYSFS call because this is undone on return.
-		if (PHYSFS_getWriteDir() != nullptr)
-			PHYSFS_mount(PHYSFS_getWriteDir(), "", false);
 		
 		PHYSFS_File* file = PHYSFS_openRead(filepath.c_str());
 		if (file == nullptr && (file = PHYSFS_openRead(std::filesystem::path(filepath).replace_extension(std::string("b") + std::filesystem::path(filepath).extension().string().substr(1)).string().c_str())) == nullptr) {
@@ -234,25 +327,32 @@ namespace TotkToolkit::IO {
 				res = stream;
 			}
 		}
-
-		// The write dir's mount was temporary, remember?
-		if (PHYSFS_getWriteDir() != nullptr)
-			PHYSFS_unmount(PHYSFS_getWriteDir());
 		return res;
 	}
-	std::shared_ptr<Formats::IO::Stream> Filesystem::OpenWriteStream(std::string filepath) {
+	std::shared_ptr<Formats::IO::Stream> _Filesystem::OpenWriteStream(std::string filepath) {
 		std::filesystem::path proximatedFilepath = std::filesystem::proximate(std::filesystem::path(filepath), "Work");
 		
 		std::vector<std::string> realDirs = GetRealDirs(filepath);
 		std::vector<std::shared_ptr<Formats::IO::Stream>> streams;
 		streams.reserve(realDirs.size());
 
+		std::string dumpDir;
+		{
+			std::shared_lock<std::shared_mutex>(mDumpDirMutex);
+			dumpDir = mDumpDir;
+		}
+		std::string writeDir;
+		{
+			std::shared_lock<std::shared_mutex>(mWriteDirMutex);
+			writeDir = mWriteDir;
+		}
+
 		if (realDirs.size() == 0) // Support new files being created
-			realDirs.push_back(mWriteDir);
+			realDirs.push_back(writeDir);
 
 		for (std::string realDir : realDirs) {
-			if (std::filesystem::path(realDir).generic_string() == (std::filesystem::path(mDumpDir) / "romfs").generic_string())
-				realDir = mWriteDir;
+			if (std::filesystem::path(realDir).generic_string() == (std::filesystem::path(dumpDir) / "romfs").generic_string())
+				realDir = writeDir;
 
 			std::filesystem::path proximatedRealDir = std::filesystem::proximate(std::filesystem::path(realDir), "Work");
 			PHYSFS_mkdir(proximatedRealDir.parent_path().generic_string().c_str());
@@ -271,7 +371,6 @@ namespace TotkToolkit::IO {
 				PHYSFS_writeBytes(realDirFile, buf, len);
 				delete[] buf;
 			}
-			//PHYSFS_close(realDirFile);
 
 			// Write dir juggling
 			std::string oldWriteDir = PHYSFS_getWriteDir();
@@ -288,18 +387,19 @@ namespace TotkToolkit::IO {
 			// Write dir juggling
 			PHYSFS_setWriteDir(oldWriteDir.c_str());
 
-			//AddPHYSFSCall(std::make_shared<MountHandle>(realDirFile, "Work", proximatedRealDir.generic_string().c_str(), 0));
-			//ExecutePHYSFSCallQueue();
+			AddPHYSFSCall(std::make_shared<TotkToolkit::IO::PHYSFSCalls::MountHandle>(realDirFile, "Work", proximatedRealDir.generic_string().c_str(), false, mFloatDirs));
+			ExecutePHYSFSCallQueue();
+			AddFloatDir(proximatedRealDir.generic_string());
 
 			streams.push_back(std::make_shared<TotkToolkit::IO::Streams::Physfs::Physfs>(file, true));
 		}
 
 		return std::make_shared<TotkToolkit::IO::Streams::Multi::Multi>(streams);
 	}
-	std::string Filesystem::GetRealDir(std::string path) {
+	std::string _Filesystem::GetRealDir(std::string path) {
 		return PHYSFS_getRealDir(path.c_str());
 	}
-	std::vector<std::string> Filesystem::GetRealDirs(std::string path) {
+	std::vector<std::string> _Filesystem::GetRealDirs(std::string path) {
 		std::vector<std::string> res;
 
 		const char** realDirs;
@@ -312,7 +412,7 @@ namespace TotkToolkit::IO {
 		return res;
 	}
 
-	std::vector<std::string> Filesystem::EnumerateFiles(std::string path) {
+	std::vector<std::string> _Filesystem::EnumerateFiles(std::string path) {
 		std::vector<std::string> res;
 
 		char** files = PHYSFS_enumerateFiles(path.c_str());
@@ -328,7 +428,7 @@ namespace TotkToolkit::IO {
 
 		return res;
 	}
-	std::vector<std::string> Filesystem::EnumerateDirectories(std::string path) {
+	std::vector<std::string> _Filesystem::EnumerateDirectories(std::string path) {
 		std::vector<std::string> res;
 
 		char** files = PHYSFS_enumerateFiles(path.c_str());
@@ -344,14 +444,14 @@ namespace TotkToolkit::IO {
 
 		return res;
 	}
-	std::vector<std::string> Filesystem::SearchFilenamesByRegex(std::string dir, std::string regex, std::shared_ptr<std::atomic<bool>> continueCondition) {
+	std::vector<std::string> _Filesystem::SearchFilenamesByRegex(std::string dir, std::string regex, std::shared_ptr<std::atomic<bool>> continueCondition) {
 		SearchFilenamesByRegexCallbackData callbackRes(regex, continueCondition);
 
 		PHYSFS_enumerate(dir.c_str(), searchFilenamesByRegexCallback, &callbackRes);
 
 		return callbackRes.mRetPaths;
 	}
-	std::vector<std::string> Filesystem::SearchFilenamesByExtension(std::string dir, std::string extension, std::shared_ptr<std::atomic<bool>> continueCondition) {
+	std::vector<std::string> _Filesystem::SearchFilenamesByExtension(std::string dir, std::string extension, std::shared_ptr<std::atomic<bool>> continueCondition) {
 		SearchFilenamesByExtensionCallbackData callbackRes(extension, continueCondition);
 		
 		PHYSFS_enumerate(dir.c_str(), searchFilenamesByExtensionCallback, &callbackRes);
@@ -359,7 +459,101 @@ namespace TotkToolkit::IO {
 		return callbackRes.mRetPaths;
 	}
 
-	TotkToolkit::Messaging::ExternalReceivers::IO::Filesystem Filesystem::sExternalReceiver;
-	std::string Filesystem::mDumpDir;
-	std::string Filesystem::mWriteDir;
+	std::shared_ptr<TotkToolkit::Threading::TaskReport> _Filesystem::GetLoadTaskReport() {
+		std::shared_ptr<TotkToolkit::Threading::TaskReport> res = std::make_shared<TotkToolkit::Threading::TaskReport>(TotkToolkit::UI::Localization::TranslationSource::GetText("PREPARE_FILES"), 0);
+
+		std::vector<std::shared_ptr<TotkToolkit::Threading::Task>> mountArchivesTasks = GetTasks(TotkToolkit::Threading::TaskType::IO_FILESYSTEM_MOUNTARCHIVES);
+		if (mountArchivesTasks.size() == 0)
+			return nullptr;
+
+		for (std::shared_ptr<TotkToolkit::Threading::Task> task : mountArchivesTasks)
+			res->AddSubTaskReport(task->GetTaskReport());
+		return res;
+	}
+
+	void _Filesystem::HandleNotice(std::shared_ptr<TotkToolkit::Messaging::Notice> notice) {
+		switch (notice->mType) {
+		case TotkToolkit::Messaging::NoticeType::CONFIGURATION_SETTINGS_CHANGE_DUMPDIR: {
+			std::shared_ptr<TotkToolkit::Messaging::Notices::Configuration::Settings::Change::DumpDir> castNotice = std::static_pointer_cast<TotkToolkit::Messaging::Notices::Configuration::Settings::Change::DumpDir>(notice);
+
+			InitThread();
+			SyncThread();
+			Unmount(castNotice->mOldDumpDir);
+			SetDumpDir(castNotice->mNewDumpDir);
+			Mount((std::filesystem::path(mDumpDir) / std::filesystem::path("romfs")).generic_string(), "Work");
+
+			// Initialize ZSTD dictionaries
+			std::shared_ptr<Formats::IO::Stream> ZsDicPack = TotkToolkit::IO::Filesystem.OpenReadStream("Work/Pack/ZsDic.pack.zs");
+			if (ZsDicPack != nullptr) {
+				MountStream(ZsDicPack, "ZsDic.pack.zs", "Work");
+
+				std::shared_ptr<Formats::IO::Stream> ZsZsdic = TotkToolkit::IO::Filesystem.OpenReadStream("Work/zs.zsdic");
+				if (ZsZsdic != nullptr)
+					Formats::Resources::ZSTD::ZSTDBackend::AddDict(ZsZsdic);
+				std::shared_ptr<Formats::IO::Stream> BcettBymlZsdic = TotkToolkit::IO::Filesystem.OpenReadStream("Work/bcett.byml.zsdic");
+				if (BcettBymlZsdic != nullptr)
+					Formats::Resources::ZSTD::ZSTDBackend::AddDict(BcettBymlZsdic);
+				std::shared_ptr<Formats::IO::Stream> PackZsDic = TotkToolkit::IO::Filesystem.OpenReadStream("Work/pack.zsdic");
+				if (PackZsDic != nullptr)
+					Formats::Resources::ZSTD::ZSTDBackend::AddDict(PackZsDic);
+			}
+
+
+			// Mount archives
+			std::shared_ptr<TotkToolkit::Threading::Task> mountArchivesTask = std::make_shared<TotkToolkit::Threading::Tasks::IO::Filesystem::MountArchives>([this]() -> void { Float(); DeinitThread(); /*sMountArchivesTask.store(nullptr);*/ }, [this]() -> std::vector<std::string> {
+					std::vector<std::string> excludeDirectories;
+					if (Filesystem.GetWriteDir() != "")
+						excludeDirectories.push_back(GetWriteDir());
+					return excludeDirectories;
+				}
+			);
+			AddTask(mountArchivesTask);
+			mountArchivesTask->ExecuteAsync();
+
+			TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_unique<TotkToolkit::Messaging::Notices::IO::Filesystem::Mount::Romfs>());
+
+			return;
+		}
+		case TotkToolkit::Messaging::NoticeType::CONFIGURATION_SETTINGS_CHANGE_WRITEDIR: {
+			std::shared_ptr<TotkToolkit::Messaging::Notices::Configuration::Settings::Change::WriteDir> castNotice = std::static_pointer_cast<TotkToolkit::Messaging::Notices::Configuration::Settings::Change::WriteDir>(notice);
+
+			InitThread();
+			SyncThread();
+			SetWriteDir(castNotice->mNewWriteDir);
+			TotkToolkit::IO::Filesystem.Unmount(castNotice->mOldWriteDir);
+			TotkToolkit::IO::Filesystem.Mount(mWriteDir, "Work");
+
+			// TOTKTOOLKIT_TODO_FUNCTIONAL: Figure out what to do about dictionaries; they should be mounted before doing this.
+
+			// Mount archives
+			std::shared_ptr<TotkToolkit::Threading::Task> mountArchivesTask = std::make_shared<TotkToolkit::Threading::Tasks::IO::Filesystem::MountArchives>([this]() -> void { Float(); DeinitThread(); /*sMountArchivesTask.store(nullptr);*/ }, [this]() -> std::vector<std::string> {
+					std::vector<std::string> excludeDirectories;
+					if (GetDumpDir() != "")
+						excludeDirectories.push_back((std::filesystem::path(GetDumpDir()) / std::filesystem::path("romfs").string()).generic_string());
+					return excludeDirectories;
+				},
+				[this](std::string dir) -> void {
+					AddFloatDir(dir); // Float all the write directories above non-write directories
+				}
+			);
+			AddTask(mountArchivesTask);
+			mountArchivesTask->ExecuteAsync();
+
+			TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_unique<TotkToolkit::Messaging::Notices::IO::Filesystem::Mount::WriteDir>());
+			return;
+		}
+		default:
+			return;
+		}
+	}
+
+	void _Filesystem::AddFloatDir(std::string dir) {
+		std::unique_lock<std::shared_mutex> lock;
+		mFloatDirs.push_back(dir);
+	}
+
+	void _Filesystem::RemoveFloatDir(std::string dir) {
+		std::unique_lock<std::shared_mutex> lock;
+		mFloatDirs.erase(std::remove(mFloatDirs.begin(), mFloatDirs.end(), dir), mFloatDirs.end());
+	}
 }

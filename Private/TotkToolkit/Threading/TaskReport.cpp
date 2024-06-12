@@ -1,16 +1,16 @@
 #include <TotkToolkit/Threading/TaskReport.h>
 
 namespace TotkToolkit::Threading {
-    TaskReport::TaskReport(std::string name) : mName(name), mProgress(0.f), mSubTaskNum(1), mChildTaskReports() {
+    TaskReport::TaskReport(std::string name) : mName(name), mProgress(0.f), mFinished(false), mSubTaskNum(1), mChildTaskReports() {
 
     }
-    TaskReport::TaskReport(std::string name, F_U32 subTaskNum) : mName(name), mProgress(0.f), mSubTaskNum(subTaskNum), mChildTaskReports() {
+    TaskReport::TaskReport(std::string name, F_U32 subTaskNum) : mName(name), mProgress(0.f), mFinished(false), mSubTaskNum(subTaskNum), mChildTaskReports() {
 
     }
-    TaskReport::TaskReport(std::string name, std::vector<std::shared_ptr<TaskReport>> childTaskReports) : mName(name), mProgress(0.f), mSubTaskNum(1), mChildTaskReports(childTaskReports) {
+    TaskReport::TaskReport(std::string name, std::vector<std::shared_ptr<TaskReport>> childTaskReports) : mName(name), mProgress(0.f), mFinished(false), mSubTaskNum(1), mChildTaskReports(childTaskReports) {
 
     }
-    TaskReport::TaskReport(std::string name, F_U32 subTaskNum, std::vector<std::shared_ptr<TaskReport>> childTaskReports) : mName(name), mProgress(0.f), mSubTaskNum(subTaskNum), mChildTaskReports(childTaskReports) {
+    TaskReport::TaskReport(std::string name, F_U32 subTaskNum, std::vector<std::shared_ptr<TaskReport>> childTaskReports) : mName(name), mProgress(0.f), mFinished(false), mSubTaskNum(subTaskNum), mChildTaskReports(childTaskReports) {
 
     }
 
@@ -21,7 +21,10 @@ namespace TotkToolkit::Threading {
                 progress += childTaskReport->GetProgress();
             }
             progress /= mChildTaskReports.size();
-            return (progress + mProgress) / 2;
+            if (mSubTaskNum != 0)
+                return (progress + mProgress) / 2;
+            else
+                return progress;
         }
         return mProgress;
     }
@@ -40,5 +43,27 @@ namespace TotkToolkit::Threading {
     }
     void TaskReport::AddProgress(F_F32 progress) {
         mProgress = mProgress.load() + progress / mSubTaskNum;
+    }
+    void TaskReport::DeclareFinished() {
+        mFinished = true;
+    }
+    bool TaskReport::IsFinished() {
+        std::shared_lock<std::shared_mutex> lock(mChildTaskReportsMutex);
+        bool childTaskReportsFinished = true;
+        for (std::shared_ptr<TaskReport> childTaskReport : mChildTaskReports) {
+            if (!childTaskReport->IsFinished()) {
+                childTaskReportsFinished = false;
+                break;
+            }
+        }
+
+        if (mSubTaskNum != 0)
+            return mFinished && childTaskReportsFinished;
+        return childTaskReportsFinished;
+    }
+
+    void TaskReport::AddSubTaskReport(std::shared_ptr<TaskReport> taskReport) {
+        std::unique_lock<std::shared_mutex> lock(mChildTaskReportsMutex);
+        mChildTaskReports.push_back(taskReport);
     }
 }

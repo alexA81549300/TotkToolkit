@@ -6,7 +6,13 @@
 
 namespace TotkToolkit::IO::PHYSFSCalls {
     void MountMemory::Execute() {
-        if (PHYSFS_mountMemory(mBuffer.get(), mBufferLength, mDeleteCallback, mNewDir.c_str(), mMountPoint.c_str(), mAppendToPath) && mNotifyFileChange)
+		int mountSuccess = PHYSFS_mountMemory(mBuffer.get(), mBufferLength, mDeleteCallback, mNewDir.c_str(), mMountPoint.c_str(), mAppendToPath);
+		for (std::string dir : mFloatDirs) {
+			PHYSFS_moveInSearchPath(dir.c_str(), 0);
+		}
+		if (mountSuccess && mNotifyFilesChanged && !mNotifiedFilesChanged) {
 			TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_shared<TotkToolkit::Messaging::Notices::IO::Filesystem::FilesChange>());
+			mNotifiedFilesChanged = true;
+		}
     }
 }

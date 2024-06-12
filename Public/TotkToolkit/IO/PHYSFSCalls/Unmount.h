@@ -7,7 +7,7 @@
 namespace TotkToolkit::IO::PHYSFSCalls {
     class Unmount : public TotkToolkit::IO::PHYSFSCall {
     public:
-        Unmount(std::string path, bool notifyFileChange = true) : mPath(path), mNotifyFileChange(notifyFileChange) {
+        Unmount(std::string path, bool notifyFilesChanged = true) : mPath(path), mNotifyFilesChanged(notifyFilesChanged) {
 
         }
 
@@ -15,6 +15,7 @@ namespace TotkToolkit::IO::PHYSFSCalls {
 
     protected:
         std::string mPath;
-        bool mNotifyFileChange;
+        bool mNotifyFilesChanged;
+        bool mNotifiedFilesChanged = false;
     };
 }

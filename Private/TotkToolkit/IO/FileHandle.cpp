@@ -17,14 +17,14 @@ namespace TotkToolkit::IO {
 	}
 
 	std::shared_ptr<Formats::IO::Stream> FileHandle::OpenReadStream() {
-		TotkToolkit::IO::Filesystem::InitThread();
-		TotkToolkit::IO::Filesystem::SyncThread();
-		return TotkToolkit::IO::Filesystem::OpenReadStream(mPath);
+		TotkToolkit::IO::Filesystem.InitThread();
+		TotkToolkit::IO::Filesystem.SyncThread();
+		return TotkToolkit::IO::Filesystem.OpenReadStream(mPath);
 	}
 
 	std::shared_ptr<Formats::IO::Stream> FileHandle::OpenWriteStream() {
-		TotkToolkit::IO::Filesystem::InitThread();
-		TotkToolkit::IO::Filesystem::SyncThread();
-		return TotkToolkit::IO::Filesystem::OpenWriteStream(mPath);
+		TotkToolkit::IO::Filesystem.InitThread();
+		TotkToolkit::IO::Filesystem.SyncThread();
+		return TotkToolkit::IO::Filesystem.OpenWriteStream(mPath);
 	}
 }
