@@ -531,8 +531,9 @@ namespace TotkToolkit::IO {
 						std::vector<std::string> res;
 
 						F_UT cacheLength = cacheStream->GetBufferLength();
-						char* cache = new char[cacheLength];
+						char* cache = new char[cacheLength + 1];
 						cacheStream->ReadBytes(cache, cacheLength);
+						cache[cacheLength] = '\0';
 
 						std::istringstream iss(cache);
 
