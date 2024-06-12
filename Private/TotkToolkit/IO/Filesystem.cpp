@@ -16,6 +16,7 @@
 #include <TotkToolkit/IO/PHYSFSCall.h>
 #include <TotkToolkit/IO/Streams/Physfs/Physfs.h>
 #include <TotkToolkit/IO/Streams/Multi/Multi.h>
+#include <TotkToolkit/IO/Streams/File/File.h>
 #include <Formats/Resources/ZSTD/ZSTDBackend.h>
 #include <archiver_sarc.h>
 #include <physfs.h>
@@ -27,6 +28,8 @@
 #include <iostream>
 #include <shared_mutex>
 #include <thread>
+#include <sstream>
+#include <cstring>
 
 struct PHYSFSCallQueueEntry {
 	std::vector<std::shared_ptr<TotkToolkit::IO::PHYSFSCall>> mCalls;
@@ -173,12 +176,16 @@ PHYSFS_EnumerateCallbackResult searchFilenamesByExtensionCallback(void *data, co
 	if (!*callbackData->mContinueCondition)
 		return PHYSFS_ENUM_STOP;
 
-	std::string filePath = (std::filesystem::path(origdir) / std::filesystem::path(fname)).generic_string().c_str();
+	// This is super slow:
+	//std::string filePath = (std::filesystem::path(origdir) / std::filesystem::path(fname)).generic_string().c_str();
+	// Instead we do this:
+	std::string filePath = std::string(origdir) + "/" + fname;
+
 
 	if (std::string(fname).ends_with(callbackData->mExtension))
 		callbackData->mRetPaths.push_back(filePath);
 
-	if (filePath.find_first_of('.') == std::string::npos) {
+	if (strchr(fname, '.') == 0) {
 	// PHYSFS_isDirectory is incredibly slow...
 	//if (PHYSFS_isDirectory(filePath.c_str())) {
 		PHYSFS_enumerate(filePath.c_str(), searchFilenamesByExtensionCallback, callbackData);
@@ -412,6 +419,16 @@ namespace TotkToolkit::IO {
 		return res;
 	}
 
+	std::shared_ptr<Formats::IO::Stream> _Filesystem::OpenCacheReadStream(std::string filepath) {
+		const char* prefDir = PHYSFS_getPrefDir("Nintenstudio", "TotkToolkit");
+		return TotkToolkit::IO::Streams::File::File::Factory(std::make_shared<std::fstream>((std::filesystem::path(prefDir) / filepath), std::ios::in | std::ios::binary));
+	}
+	std::shared_ptr<Formats::IO::Stream> _Filesystem::OpenCacheWriteStream(std::string filepath) {
+		const char* prefDir = PHYSFS_getPrefDir("Nintenstudio", "TotkToolkit");
+		std::filesystem::create_directories((std::filesystem::path(prefDir) / filepath).parent_path());
+		return TotkToolkit::IO::Streams::File::File::Factory(std::make_shared<std::fstream>((std::filesystem::path(prefDir) / filepath), std::ios::out | std::ios::binary));
+	}
+
 	std::vector<std::string> _Filesystem::EnumerateFiles(std::string path) {
 		std::vector<std::string> res;
 
@@ -453,7 +470,7 @@ namespace TotkToolkit::IO {
 	}
 	std::vector<std::string> _Filesystem::SearchFilenamesByExtension(std::string dir, std::string extension, std::shared_ptr<std::atomic<bool>> continueCondition) {
 		SearchFilenamesByExtensionCallbackData callbackRes(extension, continueCondition);
-		
+
 		PHYSFS_enumerate(dir.c_str(), searchFilenamesByExtensionCallback, &callbackRes);
 
 		return callbackRes.mRetPaths;
@@ -505,6 +522,41 @@ namespace TotkToolkit::IO {
 					if (Filesystem.GetWriteDir() != "")
 						excludeDirectories.push_back(GetWriteDir());
 					return excludeDirectories;
+				},
+				nullptr,
+				[this]() -> std::vector<std::string> {
+					std::string cachePath = "IO/Filesystem/RomfsPacks.txt";
+					std::shared_ptr<Formats::IO::Stream> cacheStream = OpenCacheReadStream(cachePath);
+					if (cacheStream) {
+						std::vector<std::string> res;
+
+						F_UT cacheLength = cacheStream->GetBufferLength();
+						char* cache = new char[cacheLength];
+						cacheStream->ReadBytes(cache, cacheLength);
+
+						std::istringstream iss(cache);
+
+						for (std::string line; std::getline(iss, line); )
+						{
+							res.push_back(line);
+						}
+
+						delete[] cache;
+						return res;
+					}
+					return std::vector<std::string>();
+				},
+				[this](std::vector<std::string> paths) -> void {
+					std::string cachePath = "IO/Filesystem/RomfsPacks.txt";
+					std::shared_ptr<Formats::IO::Stream> cacheStream = OpenCacheWriteStream(cachePath);
+					if (!cacheStream)
+						return; // Dunno what happened, guess we can't cache.
+					std::ostringstream oss;
+					for (std::string file : paths) {
+						oss << file << std::endl;
+					}
+					std::string cache = oss.str();
+					cacheStream->WriteBytes(cache.c_str(), cache.length());
 				}
 			);
 			AddTask(mountArchivesTask);

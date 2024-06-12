@@ -10,7 +10,7 @@
 #include <memory>
 
 namespace TotkToolkit::Threading::Tasks::IO::Filesystem {
-    MountArchives::MountArchives(std::function<void()> callback, std::function<std::vector<std::string>(void)> excludeDirectoriesFn, std::function<void(std::string)> floatDirectoryFn) : TotkToolkit::Threading::Task(callback, std::make_shared<TotkToolkit::Threading::TaskReport>(TotkToolkit::UI::Localization::TranslationSource::GetText("MOUNT_ARCHIVES")), TotkToolkit::Threading::TaskType::IO_FILESYSTEM_MOUNTARCHIVES), mExcludeDirectoriesFn(excludeDirectoriesFn), mFloatDirectoryFn(floatDirectoryFn) {
+    MountArchives::MountArchives(std::function<void()> callback, std::function<std::vector<std::string>(void)> excludeDirectoriesFn, std::function<void(std::string)> floatDirectoryFn, std::function<std::vector<std::string>()> getCachedPathsFn, std::function<void(std::vector<std::string>)> setCachedPathsFn) : TotkToolkit::Threading::Task(callback, std::make_shared<TotkToolkit::Threading::TaskReport>(TotkToolkit::UI::Localization::TranslationSource::GetText("MOUNT_ARCHIVES")), TotkToolkit::Threading::TaskType::IO_FILESYSTEM_MOUNTARCHIVES), mExcludeDirectoriesFn(excludeDirectoriesFn), mFloatDirectoryFn(floatDirectoryFn), mGetCachedPathsFn(getCachedPathsFn), mSetCachedPathsFn(setCachedPathsFn) {
 
     }
 
@@ -32,8 +32,17 @@ namespace TotkToolkit::Threading::Tasks::IO::Filesystem {
             }
         }
 
-        std::vector<std::string> packPaths = TotkToolkit::IO::Filesystem.SearchFilenamesByExtension("", ".pack.zs", mContinueCondition); // Equivilent to regex search for R"(\.pack\.zs$)" but faster
-        packPaths.append_range(TotkToolkit::IO::Filesystem.SearchFilenamesByExtension("", ".pack", mContinueCondition)); // Equivilent to regex search for R"(\.pack\.zs$)" but faster
+        std::vector<std::string> packPaths;
+
+        if (mGetCachedPathsFn != nullptr) {
+            packPaths = mGetCachedPathsFn();
+        }
+        if (packPaths.size() == 0) { // Cache didn't have anything or didn't exist.
+            packPaths = TotkToolkit::IO::Filesystem.SearchFilenamesByExtension("", ".pack.zs", mContinueCondition); // Equivilent to regex search for R"(\.pack\.zs$)" but faster
+            packPaths.append_range(TotkToolkit::IO::Filesystem.SearchFilenamesByExtension("", ".pack", mContinueCondition)); // Equivilent to regex search for R"(\.pack\.zs$)" but faster
+            if (mSetCachedPathsFn != nullptr)
+                mSetCachedPathsFn(packPaths);
+        }
         for (std::string packPath : packPaths) {
             if (!*mContinueCondition) {
                 for (F_U32 i = 0; i < excludeDirectories.size(); i++)

@@ -5,11 +5,17 @@
 #include <cassert>
 
 namespace TotkToolkit::IO::Streams::File {
-	File::File(std::shared_ptr<std::fstream> file) : mFile(file) {
-
+	std::shared_ptr<Formats::IO::Stream> File::Factory(std::shared_ptr<std::fstream> file) {
+		std::shared_ptr<Formats::IO::Stream> res = std::make_shared<File>(file);
+		if (std::static_pointer_cast<File>(res)->mFile->fail())
+			return nullptr;
+		return res;
 	}
-	File::File(std::string filePath) : mFile(new std::fstream(filePath, std::ios::in | std::ios::out | std::ios::binary)) {
-
+	std::shared_ptr<Formats::IO::Stream> File::Factory(std::string path) {
+		std::shared_ptr<Formats::IO::Stream> res = std::make_shared<File>(path);
+		if (std::static_pointer_cast<File>(res)->mFile->fail())
+			return nullptr;
+		return res;
 	}
 
 	void File::Seek(std::streampos pos) {
@@ -91,7 +97,18 @@ namespace TotkToolkit::IO::Streams::File {
 		return res;
 	}
 	F_UT File::GetBufferLength() {
-		PushSeek(std::ios::end);
-		return PopSeek();
+		F_UT res;
+
+		F_UT pos = mFile->tellg();
+		mFile->seekg(0, std::ios::end);
+		res = mFile->tellg();
+		mFile->seekg(pos);
+
+		return res;
+	}
+
+	File::File(std::shared_ptr<std::fstream> file) : mFile(file) {
+	}
+	File::File(std::string filePath) : mFile(new std::fstream(filePath, std::ios::in | std::ios::out | std::ios::binary)) {
 	}
 }

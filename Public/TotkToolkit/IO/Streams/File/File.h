@@ -28,7 +28,8 @@ namespace TotkToolkit::IO::Streams::File::EndianReaders {
 namespace TotkToolkit::IO::Streams::File {
 	class File : public Formats::IO::Stream {
 	public:
-		static std::shared_ptr<Formats::IO::Stream> Factory(std::string path, Formats::IO::Endianness endianness);
+		static std::shared_ptr<Formats::IO::Stream> Factory(std::shared_ptr<std::fstream> file);
+		static std::shared_ptr<Formats::IO::Stream> Factory(std::string path);
 		File(std::shared_ptr<std::fstream> file);
 		File(std::string filePath);
 

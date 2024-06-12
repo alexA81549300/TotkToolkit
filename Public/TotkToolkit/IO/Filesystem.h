@@ -35,6 +35,9 @@ namespace TotkToolkit::IO {
 		std::string GetRealDir(std::string path);
 		std::vector<std::string> GetRealDirs(std::string path);
 
+		std::shared_ptr<Formats::IO::Stream> OpenCacheReadStream(std::string filepath);
+		std::shared_ptr<Formats::IO::Stream> OpenCacheWriteStream(std::string filepath);
+
 		std::vector<std::string> EnumerateFiles(std::string path);
 		std::vector<std::string> EnumerateDirectories(std::string path);
 		std::vector<std::string> SearchFilenamesByRegex(std::string dir, std::string regex, std::shared_ptr<std::atomic<bool>> continueCondition = std::make_shared<std::atomic<bool>>(true));
