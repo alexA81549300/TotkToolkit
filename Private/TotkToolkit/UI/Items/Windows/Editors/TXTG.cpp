@@ -5,10 +5,10 @@
 #include <glad/glad.h>
 
 namespace TotkToolkit::UI::Items::Windows::Editors {
-	TXTG::TXTG(TotkToolkit::IO::FileHandle fileHandle, std::string name, bool* open) : TotkToolkit::UI::Items::Windows::Editors::Texture(fileHandle, name, open), TotkToolkit::Resource(fileHandle) {
+	TXTG::TXTG(TotkToolkit::IO::FileHandle fileHandle, std::string name, bool* open) : TotkToolkit::UI::Items::Windows::Editors::Texture(fileHandle, name, open), mFileHandle(fileHandle) {
 		
 	}
-	TXTG::TXTG(std::shared_ptr<Formats::Resources::TXTG::TXTG> txtg, std::string name, bool* open) : TotkToolkit::UI::Items::Windows::Editors::Texture(txtg, name, open), TotkToolkit::Resource(txtg), mTXTG(txtg) {
+	TXTG::TXTG(std::shared_ptr<Formats::Resources::TXTG::TXTG> txtg, std::string name, bool* open) : TotkToolkit::UI::Items::Windows::Editors::Texture(txtg, name, open), mFileHandle(), mTXTG(txtg) {
 		
 	}
 
@@ -23,9 +23,6 @@ namespace TotkToolkit::UI::Items::Windows::Editors {
 	}
 
 	bool TXTG::Parse() {
-		return Parse_();
-	}
-	bool TXTG::Parse_() {
 		if (mTXTG == nullptr) {
 			if (mFileHandle.IsNull())
 				return false;
@@ -47,13 +44,13 @@ namespace TotkToolkit::UI::Items::Windows::Editors {
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-			#if defined(GL_UNPACK_ROW_LENGTH)
+#if defined(GL_UNPACK_ROW_LENGTH)
 			glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-			#endif
+#endif
 			//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mTXTG->GetWidth(), mTXTG->GetHeight(), 0, GL_RGBA, GL_UNSIGNED_BYTE, data.get());
 
 			TotkToolkit::Rendering::TextureCompression::Load(texId, GL_TEXTURE_2D, surface->GetWidth(), surface->GetHeight(), 0, mTXTG->GetFormat(), data, dataSize);
-			
+
 			mMips.push_back((ImTextureID)texId);
 
 			//if (GLAD_GL_EXT_texture_compression_s3tc) {

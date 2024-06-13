@@ -15,10 +15,10 @@ namespace TotkToolkit::UI::Items::Windows::Editors {
 
         virtual void DrawContents() override;
         virtual bool Parse() override;
-        virtual bool Parse_() override;
         virtual bool Serialize() override;
 
     protected:
+        TotkToolkit::IO::FileHandle mFileHandle;
         std::shared_ptr<Formats::Resources::TXTG::TXTG> mTXTG;
         std::vector<ImTextureID> mMips;
 

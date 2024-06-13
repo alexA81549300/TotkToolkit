@@ -3,10 +3,10 @@
 #include <imgui.h>
 
 namespace TotkToolkit::UI::Items::Windows {
-	Editor::Editor(TotkToolkit::IO::FileHandle fileHandle, std::string name, bool* open) : TotkToolkit::Resource(fileHandle), TotkToolkit::UI::Items::Window(name, open) {
+	Editor::Editor(TotkToolkit::IO::FileHandle fileHandle, std::string name, bool* open) : TotkToolkit::UI::Items::Window(name, open) {
 		mWindowFlags |= ImGuiWindowFlags_MenuBar;
 	}
-	Editor::Editor(std::shared_ptr<Formats::Resource> resource, std::string name, bool* open) : TotkToolkit::Resource(resource), TotkToolkit::UI::Items::Window(name, open) {
+	Editor::Editor(std::shared_ptr<Formats::Resource> resource, std::string name, bool* open) : TotkToolkit::UI::Items::Window(name, open) {
 		mWindowFlags |= ImGuiWindowFlags_MenuBar;
 	}
 

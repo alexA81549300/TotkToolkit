@@ -8,17 +8,21 @@
 #include <memory>
 
 namespace TotkToolkit::Resources {
-	class BGYML : virtual public TotkToolkit::Resource {
+	class BGYML : public TotkToolkit::Resource {
 	public:
-		BGYML(TotkToolkit::IO::FileHandle fileHandle, std::string name, bool* open);
+		BGYML(TotkToolkit::IO::FileHandle fileHandle);
 
 		virtual bool Parse() override;
-		virtual bool Parse_() override;
 		virtual bool Serialize() override;
 
+		std::string GetParentPath();
+		void SetParentPath(std::string parentPath);
+
 	protected:
-		TotkToolkit::IO::FileHandle mFileHandle;
+		// This isn't inherited because we need to be able to construct the right version.
 		std::shared_ptr<Formats::Resources::BYML::BYML> mBYML;
+
+		std::shared_ptr<BGYML> mParent;
 		bool mModified;
 	};
 }

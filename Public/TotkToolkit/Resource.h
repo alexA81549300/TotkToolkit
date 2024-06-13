@@ -11,7 +11,6 @@ namespace TotkToolkit {
 		Resource(std::shared_ptr<Formats::Resource> resource);
 
 		virtual bool Parse() override = 0;
-		virtual bool Parse_() = 0;
 		virtual bool Serialize() override = 0;
 		virtual bool RequestParse(Formats::ResourceParsedCallback callback) override { return false; } // TOTKTOOLKIT_TODO_FUNCTIONAL Implement ocne implemented in Formats
 

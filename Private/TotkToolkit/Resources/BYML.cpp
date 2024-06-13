@@ -7,9 +7,6 @@ namespace TotkToolkit::Resources {
 	BYML::BYML(std::shared_ptr<Formats::Resource> resource) : TotkToolkit::Resource(resource) {}
 
 	bool BYML::Parse() {
-		return Parse_();
-	}
-	bool BYML::Parse_() {
 		mBYML = Formats::Resources::BYML::BYML::Factory(mFileHandle.OpenReadStream());
 		if (mBYML == nullptr)
 			return false;

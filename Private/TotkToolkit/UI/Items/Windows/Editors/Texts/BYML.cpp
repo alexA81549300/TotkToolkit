@@ -3,13 +3,12 @@
 #include <imgui.h>
 
 namespace TotkToolkit::UI::Items::Windows::Editors::Texts {
-	BYML::BYML(TotkToolkit::IO::FileHandle fileHandle, std::string name, bool* open) : TotkToolkit::UI::Items::Windows::Editors::Text(fileHandle, name, open), TotkToolkit::Resources::BYML(fileHandle), TotkToolkit::Resource(fileHandle) {
+	BYML::BYML(TotkToolkit::IO::FileHandle fileHandle, std::string name, bool* open) : TotkToolkit::UI::Items::Windows::Editors::Text(fileHandle, name, open), mBYML(std::make_shared<TotkToolkit::Resources::BYML>(fileHandle)) {
 		mTextEditor.SetLanguageDefinition(ImGuiColorTextEdit::TextEditor::LanguageDefinition::Yaml());
 	}
 
 	bool BYML::Parse() {
-		mBYML = Formats::Resources::BYML::BYML::Factory(mFileHandle.OpenReadStream());
-		if (mBYML == nullptr)
+		if (!mBYML->Parse())
 			return false;
 
 		mSavedText = mBYML->ToYAML();
@@ -20,11 +19,6 @@ namespace TotkToolkit::UI::Items::Windows::Editors::Texts {
 
 	bool BYML::Serialize() {
 		mBYML->LoadYAML(mTextEditor.GetText());
-
-		std::shared_ptr<Formats::IO::Stream> oldStream = mBYML->GetStream();
-		mBYML->SetStream(mFileHandle.OpenWriteStream());
-		bool success = mBYML->Serialize();
-		mBYML->SetStream(oldStream);
-		return success;
+		return mBYML->Serialize();
 	}
 }
