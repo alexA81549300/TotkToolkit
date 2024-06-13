@@ -39,7 +39,8 @@ namespace TotkToolkit::Threading::Tasks::IO::Filesystem {
         }
         if (packPaths.size() == 0) { // Cache didn't have anything or didn't exist.
             packPaths = TotkToolkit::IO::Filesystem.SearchFilenamesByExtension("", ".pack.zs", mContinueCondition); // Equivilent to regex search for R"(\.pack\.zs$)" but faster
-            packPaths.append_range(TotkToolkit::IO::Filesystem.SearchFilenamesByExtension("", ".pack", mContinueCondition)); // Equivilent to regex search for R"(\.pack\.zs$)" but faster
+            std::vector<std::string> uncompressedPackPaths = TotkToolkit::IO::Filesystem.SearchFilenamesByExtension("", ".pack", mContinueCondition);
+            packPaths.insert(packPaths.end(), uncompressedPackPaths.begin(), uncompressedPackPaths.end());
             if (mSetCachedPathsFn != nullptr)
                 mSetCachedPathsFn(packPaths);
         }

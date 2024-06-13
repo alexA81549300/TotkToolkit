@@ -4,6 +4,7 @@
 #include <TotkToolkit/Messaging/Notices/Error.h>
 #include <TotkToolkit/Messaging/NoticeType.h>
 #include <shared_mutex>
+#include <mutex>
 
 namespace TotkToolkit::Messaging::ExternalReceivers::UI {
 	void ErrorSystem::HandleNotice(std::shared_ptr<TotkToolkit::Messaging::Notice> notice) {

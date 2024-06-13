@@ -1,5 +1,7 @@
 #include <TotkToolkit/Threading/TaskReport.h>
 
+#include <mutex>
+
 namespace TotkToolkit::Threading {
     TaskReport::TaskReport(std::string name) : mName(name), mProgress(0.f), mFinished(false), mSubTaskNum(1), mChildTaskReports() {
 
