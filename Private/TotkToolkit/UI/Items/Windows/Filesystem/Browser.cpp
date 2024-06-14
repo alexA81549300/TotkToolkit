@@ -136,7 +136,9 @@ namespace TotkToolkit::UI::Items::Windows::Filesystem {
                         continue;
                     }
 
+                    ImGui::PushItemWidth(TotkToolkit::UI::Items::Filesystem::File::GetDefaultWidth());
                     mCurrentFiles[i].Draw();
+                    ImGui::PopItemWidth();
 
                     ImGui::PopID();
                 }
@@ -187,7 +189,7 @@ namespace TotkToolkit::UI::Items::Windows::Filesystem {
         std::unique_lock<TotkToolkit::Threading::Mutexes::SharedRecursive> lock(mCurrentFilesMutex);
         mCurrentFiles.resize(currentFiles.size());
         for (int i = 0; i < currentFiles.size(); i++)
-            mCurrentFiles[i] = TotkToolkit::UI::Items::Filesystem::File(currentPath + currentFiles[i]);
+            mCurrentFiles[i] = TotkToolkit::UI::Items::Filesystem::File(currentPath + currentFiles[i], false);
     }
 
     void Browser::UpdateDirectories() {

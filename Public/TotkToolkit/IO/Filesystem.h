@@ -20,6 +20,7 @@ namespace TotkToolkit::IO {
 
 		void Mount(std::string path, std::string mountPoint, bool notifyFileChange = true, bool deferredFloating = false);
 		void MountStream(std::shared_ptr<Formats::IO::Stream> stream, std::string filename, std::string mountPoint, bool notifyFileChange = true, bool deferredFloating = false);
+		void MountHandle(void* handle, std::string filename, std::string mountPoint, bool notifyFileChange = true, bool deferredFloating = false);
 		void Unmount(std::string path, bool notifyFileChange = true);
 		void Float();
 		bool TempMount(std::string path, std::string mountPoint);
@@ -30,6 +31,7 @@ namespace TotkToolkit::IO {
 		std::string GetWriteDir();
 		void SetWriteDir(std::string dir);
 
+		bool FileExists(std::string filepath);
 		std::shared_ptr<Formats::IO::Stream> OpenReadStream(std::string filepath);
 		std::shared_ptr<Formats::IO::Stream> OpenWriteStream(std::string filepath);
 		std::string GetRealDir(std::string path);

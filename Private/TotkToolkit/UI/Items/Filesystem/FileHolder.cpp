@@ -11,10 +11,13 @@ namespace TotkToolkit::UI::Items::Filesystem {
 	}
 
 	void FileHolder::Draw() {
+		ImGui::BeginGroup();
+
 		ImVec2 filePos = ImGui::GetCursorScreenPos();
 		mFile.Draw();
+
+		// Border seemed like too much for some reason..
 		ImVec2 fileEndPos = ImVec2(filePos.x + ImGui::GetItemRectSize().x, filePos.y + ImGui::GetItemRectSize().y);
-		
 		ImGui::GetWindowDrawList()->AddRect(filePos, fileEndPos, IM_COL32(ImGui::GetStyle().Colors[ImGuiCol_Border].x * 255, ImGui::GetStyle().Colors[ImGuiCol_Border].y * 255, ImGui::GetStyle().Colors[ImGuiCol_Border].z * 255, ImGui::GetStyle().Colors[ImGuiCol_Border].w * 255));
 
 		if (ImGui::BeginDragDropTarget()) {
@@ -27,6 +30,8 @@ namespace TotkToolkit::UI::Items::Filesystem {
 			}
 			ImGui::EndDragDropTarget();
 		}
+
+		ImGui::EndGroup();
 	}
 
 	TotkToolkit::UI::Items::Filesystem::File FileHolder::GetFile() const {

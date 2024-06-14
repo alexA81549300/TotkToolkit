@@ -10,6 +10,7 @@
 #include <TotkToolkit/Threading/Tasks/IO/Filesystem/MountArchives.h>
 #include <TotkToolkit/IO/PHYSFSCalls/Mount.h>
 #include <TotkToolkit/IO/PHYSFSCalls/MountMemory.h>
+#include <TotkToolkit/IO/PHYSFSCalls/MountHandle.h>
 #include <TotkToolkit/IO/PHYSFSCalls/Unmount.h>
 #include <TotkToolkit/IO/PHYSFSCalls/Float.h>
 #include <TotkToolkit/IO/PHYSFSCalls/SetWriteDir.h>
@@ -19,6 +20,7 @@
 #include <TotkToolkit/IO/Streams/File/File.h>
 #include <Formats/Resources/ZSTD/ZSTDBackend.h>
 #include <archiver_sarc.h>
+#include <zstd_io.h>
 #include <physfs.h>
 #include <filesystem>
 #include <map>
@@ -198,35 +200,6 @@ PHYSFS_EnumerateCallbackResult searchFilenamesByExtensionCallback(void *data, co
 }
 
 
-namespace TotkToolkit::IO::PHYSFSCalls {
-	class MountHandle : public TotkToolkit::IO::PHYSFSCall {
-	public:
-		MountHandle(PHYSFS_File* handle, std::string mountPoint, std::string newDir, bool appendToPath, std::vector<std::string> floatDirs, bool notifyFilesChanged = true) : mHandle(handle), mMountPoint(mountPoint), mNewDir(newDir), mAppendToPath(appendToPath), mFloatDirs(floatDirs), mNotifyFilesChanged(notifyFilesChanged) {
-
-		}
-
-		virtual void Execute() override {
-			int mountSuccess = PHYSFS_mountHandle(mHandle, mNewDir.c_str(), mMountPoint.c_str(), mAppendToPath);
-			for (std::string dir : mFloatDirs) {
-				PHYSFS_moveInSearchPath(dir.c_str(), 0);
-			}
-			if (mountSuccess && mNotifyFilesChanged && !mNotifiedFilesChanged) {
-				TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_shared<TotkToolkit::Messaging::Notices::IO::Filesystem::FilesChange>());
-				mNotifiedFilesChanged = true;
-			}
-		}
-
-	protected:
-		PHYSFS_File* mHandle;
-		std::string mMountPoint;
-		std::string mNewDir;
-		bool mAppendToPath;
-		std::vector<std::string> mFloatDirs;
-		bool mNotifyFilesChanged;
-		bool mNotifiedFilesChanged = false;
-	};
-}
-
 namespace TotkToolkit::IO {
 	_Filesystem Filesystem;
 
@@ -256,6 +229,10 @@ namespace TotkToolkit::IO {
 		std::shared_ptr<F_U8[]> buffer = stream->GetBuffer();
 		F_UT bufferLength = stream->GetBufferLength();
 		AddPHYSFSCall(std::make_shared<TotkToolkit::IO::PHYSFSCalls::MountMemory>(buffer, bufferLength, nullptr, filename, mountPoint, true, deferredFloating ? std::vector<std::string>() : mFloatDirs, notifyFileChange));
+		ExecutePHYSFSCallQueue();
+	}
+	void _Filesystem::MountHandle(void* handle, std::string filename, std::string mountPoint, bool notifyFileChange, bool deferredFloating) {
+		AddPHYSFSCall(std::make_shared<TotkToolkit::IO::PHYSFSCalls::MountHandle>(handle, mountPoint, filename, true, deferredFloating ? std::vector<std::string>() : mFloatDirs, notifyFileChange));
 		ExecutePHYSFSCallQueue();
 	}
 	void _Filesystem::Unmount(std::string path, bool notifyFileChange) {
@@ -303,6 +280,10 @@ namespace TotkToolkit::IO {
 		mWriteDir = dir;
 	}
 
+	bool _Filesystem::FileExists(std::string filepath) {
+		PHYSFS_Stat stat;
+		return PHYSFS_stat(filepath.c_str(), &stat) != 0;
+	}
 	// TOTKTOOLKIT_TODO_FUNCTIONAL: Implement ZSTD on a physfs level to save hella memory
 	std::map<std::string, std::shared_ptr<Formats::IO::Stream>> packZstdStreamCache;
 	std::shared_ptr<Formats::IO::Stream> _Filesystem::OpenReadStream(std::string filepath) {
@@ -513,16 +494,16 @@ namespace TotkToolkit::IO {
 				std::shared_ptr<Formats::IO::Stream> PackZsDic = TotkToolkit::IO::Filesystem.OpenReadStream("Work/pack.zsdic");
 				if (PackZsDic != nullptr)
 					Formats::Resources::ZSTD::ZSTDBackend::AddDict(PackZsDic);
+
+				// Sarc archiver zstd
+				zstd_io_add_dict("Work/zs.zsdic");
+				zstd_io_add_dict("Work/bcett.byml.zsdic");
+				zstd_io_add_dict("Work/pack.zsdic");
 			}
 
 
 			// Mount archives
-			std::shared_ptr<TotkToolkit::Threading::Task> mountArchivesTask = std::make_shared<TotkToolkit::Threading::Tasks::IO::Filesystem::MountArchives>([this]() -> void { Float(); DeinitThread(); /*sMountArchivesTask.store(nullptr);*/ }, [this]() -> std::vector<std::string> {
-					std::vector<std::string> excludeDirectories;
-					if (Filesystem.GetWriteDir() != "")
-						excludeDirectories.push_back(GetWriteDir());
-					return excludeDirectories;
-				},
+			std::shared_ptr<TotkToolkit::Threading::Task> mountArchivesTask = std::make_shared<TotkToolkit::Threading::Tasks::IO::Filesystem::MountArchives>((std::filesystem::path(mDumpDir) / "romfs").generic_string(), [this]() -> void { Float(); DeinitThread(); /*sMountArchivesTask.store(nullptr);*/ },
 				nullptr,
 				[this]() -> std::vector<std::string> {
 					std::string cachePath = "IO/Filesystem/RomfsPacks.txt";
@@ -579,12 +560,7 @@ namespace TotkToolkit::IO {
 			// TOTKTOOLKIT_TODO_FUNCTIONAL: Figure out what to do about dictionaries; they should be mounted before doing this.
 
 			// Mount archives
-			std::shared_ptr<TotkToolkit::Threading::Task> mountArchivesTask = std::make_shared<TotkToolkit::Threading::Tasks::IO::Filesystem::MountArchives>([this]() -> void { Float(); DeinitThread(); /*sMountArchivesTask.store(nullptr);*/ }, [this]() -> std::vector<std::string> {
-					std::vector<std::string> excludeDirectories;
-					if (GetDumpDir() != "")
-						excludeDirectories.push_back((std::filesystem::path(GetDumpDir()) / std::filesystem::path("romfs").string()).generic_string());
-					return excludeDirectories;
-				},
+			std::shared_ptr<TotkToolkit::Threading::Task> mountArchivesTask = std::make_shared<TotkToolkit::Threading::Tasks::IO::Filesystem::MountArchives>(mWriteDir, [this]() -> void { Float(); DeinitThread(); /*sMountArchivesTask.store(nullptr);*/ },
 				[this](std::string dir) -> void {
 					AddFloatDir(dir); // Float all the write directories above non-write directories
 				}

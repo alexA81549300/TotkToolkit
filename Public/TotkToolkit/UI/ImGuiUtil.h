@@ -19,6 +19,8 @@ namespace TotkToolkit::UI::ImGuiUtil {
 		for (unsigned int i = 0; fmt[i] != '\0';) {
 			line[lineIndex] = fmt[i];
 			if (ImGui::CalcTextSize(line).x > (max - min)) {
+				if (strlen(line) == 1) // Can't fit this at all
+					break;
 				line[lineIndex] = '\0';
 				TextCentered(line, min, max);
 				memset(line, '\0', strlen(fmt) + 1);

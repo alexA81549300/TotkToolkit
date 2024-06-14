@@ -12,18 +12,26 @@
 #include <TotkToolkit/UI/ImGuiUtil.h>
 #include <TotkToolkit/UI/Icons.h>
 #include <TotkToolkit/UI/Fonts.h>
+#include <TotkToolkit/IO/Filesystem.h>
 #include <imgui.h>
 #include <filesystem>
 
 namespace TotkToolkit::UI::Items::Filesystem {
-    File::File() : mPath(""), TotkToolkit::UI::Item() {
+    File::File() : mPath(""), TotkToolkit::UI::Item(), mValid(true) {
 
     }
-	File::File(std::string path) : mPath(path), TotkToolkit::UI::Item() {
-
+	File::File(std::string path, bool checkValidity) : mPath(path), TotkToolkit::UI::Item(), mValid(true) {
+        if (checkValidity)
+            CheckValidity();
 	}
 
-	void File::Draw() {
+    void File::Draw() {
+        F_F32 width = ImGui::CalcItemWidth();
+        F_F32 height = 4 * ImGui::GetFontSize();
+
+        if (!mValid)
+            ImGui::BeginDisabled();
+
         ImGui::BeginGroup();
 
         std::string filename = std::filesystem::path(mPath).filename().string();
@@ -32,11 +40,8 @@ namespace TotkToolkit::UI::Items::Filesystem {
         ImVec2 itemPos = ImGui::GetCursorPos();
         ImVec2 itemScreenPos = ImGui::GetCursorScreenPos();
 
-        // Get the width (& height) of the item
-        float itemWidth = 4 * ImGui::GetFontSize();
-
         // Make the actual button the user can click on
-        if (ImGui::InvisibleButton(("File " + mPath).c_str(), ImVec2(itemWidth, itemWidth))) {
+        if (ImGui::InvisibleButton(("File " + mPath).c_str(), ImVec2(width, height))) {
             if (mPath.ends_with(".game__component__LifeParam.bgyml") || mPath.ends_with(".game__component__LifeParam.gyml")) {
                 std::string currentFilePath = mPath;
                 std::shared_ptr<TotkToolkit::UI::Items::Windows::Editors::BGYMLs::game::component::LifeParam> editor = std::make_shared<TotkToolkit::UI::Items::Windows::Editors::BGYMLs::game::component::LifeParam>(TotkToolkit::IO::FileHandle(currentFilePath), mPath, nullptr);
@@ -55,7 +60,7 @@ namespace TotkToolkit::UI::Items::Filesystem {
         // Add hover effect to the button
         if (ImGui::IsItemHovered()) {
             ImVec2 hoverRectMin = ImVec2(itemScreenPos.x, itemScreenPos.y);
-            ImVec2 hoverRectMax = ImVec2(itemScreenPos.x + itemWidth, itemScreenPos.y + itemWidth);
+            ImVec2 hoverRectMax = ImVec2(itemScreenPos.x + width, itemScreenPos.y + height);
             ImVec4 hoverColor = ImGui::GetStyle().Colors[ImGuiCol_HeaderHovered];
             ImGui::GetWindowDrawList()->AddRectFilled(hoverRectMin, hoverRectMax, IM_COL32(hoverColor.x * 255, hoverColor.y * 255, hoverColor.z * 255, hoverColor.w * 255), ImGui::GetStyle().FrameRounding);
         }
@@ -96,14 +101,26 @@ namespace TotkToolkit::UI::Items::Filesystem {
 
         // Draw the icon
         ImGui::PushFont(TotkToolkit::UI::Fonts::sNormalFont2x);
-        TotkToolkit::UI::ImGuiUtil::TextCentered(TotkToolkit::UI::Icons::FILE_ICON, ImGui::GetCursorPos().x, ImGui::GetCursorPos().x + itemWidth);
+        TotkToolkit::UI::ImGuiUtil::TextCentered(TotkToolkit::UI::Icons::FILE_ICON, ImGui::GetCursorPos().x, ImGui::GetCursorPos().x + width);
         ImGui::PopFont();
 
         // Draw the name
         ImGui::PushFont(TotkToolkit::UI::Fonts::sNormalFont_75x);
-        TotkToolkit::UI::ImGuiUtil::TextCenteredWrapped(filename.c_str(), ImGui::GetCursorPos().x, ImGui::GetCursorPos().x + itemWidth);
+        TotkToolkit::UI::ImGuiUtil::TextCenteredWrapped(filename.c_str(), ImGui::GetCursorPos().x, ImGui::GetCursorPos().x + width);
         ImGui::PopFont();
 
         ImGui::EndGroup();
-	}
+
+        if (!mValid)
+            ImGui::EndDisabled();
+    }
+    F_F32 File::GetDefaultWidth() {
+        return 4 * ImGui::GetFontSize();
+    }
+
+    void File::CheckValidity() {
+        TotkToolkit::IO::Filesystem.InitThread();
+        TotkToolkit::IO::Filesystem.SyncThread();
+        mValid = TotkToolkit::IO::Filesystem.FileExists(mPath);
+    }
 }

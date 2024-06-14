@@ -10,5 +10,8 @@ namespace TotkToolkit::UI::Items::Windows::Editors {
 	public:
 		BGYML(TotkToolkit::IO::FileHandle fileHandle, std::string name, bool* open);
 		BGYML(std::shared_ptr<TotkToolkit::Resources::BGYML> resource, std::string name, bool* open);
+
+		static std::string ConvertPathToReal(std::string filepath);
+		static std::string ConvertPathToVirtual(std::string filepath);
 	};
 }
