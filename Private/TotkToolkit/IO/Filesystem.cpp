@@ -503,44 +503,7 @@ namespace TotkToolkit::IO {
 
 
 			// Mount archives
-			std::shared_ptr<TotkToolkit::Threading::Task> mountArchivesTask = std::make_shared<TotkToolkit::Threading::Tasks::IO::Filesystem::MountArchives>((std::filesystem::path(mDumpDir) / "romfs").generic_string(), [this]() -> void { Float(); DeinitThread(); /*sMountArchivesTask.store(nullptr);*/ },
-				nullptr,
-				[this]() -> std::vector<std::string> {
-					std::string cachePath = "IO/Filesystem/RomfsPacks.txt";
-					std::shared_ptr<Formats::IO::Stream> cacheStream = OpenCacheReadStream(cachePath);
-					if (cacheStream) {
-						std::vector<std::string> res;
-
-						F_UT cacheLength = cacheStream->GetBufferLength();
-						char* cache = new char[cacheLength + 1];
-						cacheStream->ReadBytes(cache, cacheLength);
-						cache[cacheLength] = '\0';
-
-						std::istringstream iss(cache);
-
-						for (std::string line; std::getline(iss, line); )
-						{
-							res.push_back(line);
-						}
-
-						delete[] cache;
-						return res;
-					}
-					return std::vector<std::string>();
-				},
-				[this](std::vector<std::string> paths) -> void {
-					std::string cachePath = "IO/Filesystem/RomfsPacks.txt";
-					std::shared_ptr<Formats::IO::Stream> cacheStream = OpenCacheWriteStream(cachePath);
-					if (!cacheStream)
-						return; // Dunno what happened, guess we can't cache.
-					std::ostringstream oss;
-					for (std::string file : paths) {
-						oss << file << std::endl;
-					}
-					std::string cache = oss.str();
-					cacheStream->WriteBytes(cache.c_str(), cache.length());
-				}
-			);
+			std::shared_ptr<TotkToolkit::Threading::Task> mountArchivesTask = std::make_shared<TotkToolkit::Threading::Tasks::IO::Filesystem::MountArchives>((std::filesystem::path(mDumpDir) / "romfs" / "Pack").generic_string(), [this]() -> void { Float(); DeinitThread(); /*sMountArchivesTask.store(nullptr);*/ });
 			AddTask(mountArchivesTask);
 			mountArchivesTask->ExecuteAsync();
 
@@ -560,7 +523,7 @@ namespace TotkToolkit::IO {
 			// TOTKTOOLKIT_TODO_FUNCTIONAL: Figure out what to do about dictionaries; they should be mounted before doing this.
 
 			// Mount archives
-			std::shared_ptr<TotkToolkit::Threading::Task> mountArchivesTask = std::make_shared<TotkToolkit::Threading::Tasks::IO::Filesystem::MountArchives>(mWriteDir, [this]() -> void { Float(); DeinitThread(); /*sMountArchivesTask.store(nullptr);*/ },
+			std::shared_ptr<TotkToolkit::Threading::Task> mountArchivesTask = std::make_shared<TotkToolkit::Threading::Tasks::IO::Filesystem::MountArchives>((std::filesystem::path(mWriteDir) / "Pack").generic_string(), [this]() -> void { Float(); DeinitThread(); /*sMountArchivesTask.store(nullptr);*/ },
 				[this](std::string dir) -> void {
 					AddFloatDir(dir); // Float all the write directories above non-write directories
 				}
