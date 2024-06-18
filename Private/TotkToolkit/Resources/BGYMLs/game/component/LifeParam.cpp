@@ -18,6 +18,11 @@ namespace TotkToolkit::Resources::BGYMLs::game::component {
 		if (stringHash == nullptr)
 			return false;
 
+		if (stringHash->HasKey("BlackboardTableRef")) {
+			std::shared_ptr<Formats::Resources::BYML::Node> node = (*stringHash)["BlackboardTableRef"];
+			std::shared_ptr<Formats::Resources::BYML::Nodes::String> string = node->AsString();
+			mBlackboardTableRefPath = string->AsStdString();
+		}
 		if (stringHash->HasKey("DamageParameters")) {
 			std::shared_ptr<Formats::Resources::BYML::Node> node = (*stringHash)["DamageParameters"];
 			std::shared_ptr<Formats::Resources::BYML::Nodes::String> string = node->AsString();
@@ -40,6 +45,7 @@ namespace TotkToolkit::Resources::BGYMLs::game::component {
 
 	bool LifeParam::Serialize() {
 		std::shared_ptr<Formats::Resources::BYML::Nodes::StringHash> stringHash = mBYML->GetRoot()->AsStringHash();
+		(*stringHash)["BlackboardTableRef"] = mBYML->GetStringTable()->GetStringNode(mBYML->GetStringTable()->AddString(mBlackboardTableRefPath));
 		(*stringHash)["DamageParameters"] = mBYML->GetStringTable()->GetStringNode(mBYML->GetStringTable()->AddString(mDamageParametersPath));
 		(*stringHash)["LifeParameters"] = mBYML->GetStringTable()->GetStringNode(mBYML->GetStringTable()->AddString(mLifeParametersPath));
 		(*stringHash)["InitInvincibilityType"] = mBYML->GetStringTable()->GetStringNode(mBYML->GetStringTable()->AddString(mInitInvincibilityType));
@@ -52,6 +58,13 @@ namespace TotkToolkit::Resources::BGYMLs::game::component {
 		writeStream->Flush();
 
 		return true;
+	}
+
+	std::string LifeParam::GetBlackboardTableRefPath() {
+		return mBlackboardTableRefPath;
+	}
+	void LifeParam::SetBlackboardTableRefPath(std::string blackboardTableRefPath) {
+		mBlackboardTableRefPath = blackboardTableRefPath;
 	}
 
 	std::string LifeParam::GetDamageParametersPath() {

@@ -86,7 +86,7 @@ int main()
     #if (SWITCH)
 	    GLFWwindow* window = glfwCreateWindow(640, 480, "TotkToolkit", glfwGetPrimaryMonitor(), NULL);
     #else
-        GLFWwindow* window = glfwCreateWindow(640, 480, "TotkToolkit", NULL, NULL);
+        GLFWwindow* window = glfwCreateWindow(1280, 960, "TotkToolkit", NULL, NULL);
     #endif
 
 	glfwMakeContextCurrent(window);

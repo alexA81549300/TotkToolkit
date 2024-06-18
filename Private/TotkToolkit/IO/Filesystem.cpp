@@ -282,7 +282,7 @@ namespace TotkToolkit::IO {
 
 	bool _Filesystem::FileExists(std::string filepath) {
 		PHYSFS_Stat stat;
-		return PHYSFS_stat(filepath.c_str(), &stat) != 0;
+		return PHYSFS_stat(filepath.c_str(), &stat) != 0 && stat.filetype == PHYSFS_FILETYPE_REGULAR;
 	}
 	// TOTKTOOLKIT_TODO_FUNCTIONAL: Implement ZSTD on a physfs level to save hella memory
 	std::map<std::string, std::shared_ptr<Formats::IO::Stream>> packZstdStreamCache;

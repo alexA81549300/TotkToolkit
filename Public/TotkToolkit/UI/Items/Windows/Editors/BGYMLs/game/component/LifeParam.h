@@ -20,6 +20,7 @@ namespace TotkToolkit::UI::Items::Windows::Editors::BGYMLs::game::component {
 		std::shared_ptr<TotkToolkit::Resources::BGYMLs::game::component::LifeParam> mLifeParam;
 
 		std::shared_ptr<TotkToolkit::UI::Items::Filesystem::FileHolder> mParentHolder;
+		std::shared_ptr<TotkToolkit::UI::Items::Filesystem::FileHolder> mBlackboardTableRefHolder;
 		std::shared_ptr<TotkToolkit::UI::Items::Filesystem::FileHolder> mDamageParametersHolder;
 		std::shared_ptr<TotkToolkit::UI::Items::Filesystem::FileHolder> mLifeParametersHolder;
 	};

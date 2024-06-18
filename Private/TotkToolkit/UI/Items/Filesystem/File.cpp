@@ -9,6 +9,7 @@
 #include <TotkToolkit/Messaging/Notices/Configuration/Settings/Change/DumpDir.h>
 #include <TotkToolkit/Messaging/Notices/IO/Filesystem/FilesChange.h>
 #include <TotkToolkit/Messaging/Notices/Errors/UI/Items/Windows/Editor/ParseFailed.h>
+#include <TotkToolkit/UI/Localization/TranslationSource.h>
 #include <TotkToolkit/UI/ImGuiUtil.h>
 #include <TotkToolkit/UI/Icons.h>
 #include <TotkToolkit/UI/Fonts.h>
@@ -26,6 +27,8 @@ namespace TotkToolkit::UI::Items::Filesystem {
 	}
 
     void File::Draw() {
+        ImGui::PushID(this);
+
         F_F32 width = ImGui::CalcItemWidth();
         F_F32 height = 4 * ImGui::GetFontSize();
 
@@ -72,20 +75,18 @@ namespace TotkToolkit::UI::Items::Filesystem {
                 ImGui::PushID("Open With");
 
                 if (ImGui::MenuItem("BYML Text")) {
-                    std::string currentFilePath = mPath;
-                    std::shared_ptr<TotkToolkit::UI::Items::Windows::Editors::Texts::BYML> editor = std::make_shared<TotkToolkit::UI::Items::Windows::Editors::Texts::BYML>(TotkToolkit::IO::FileHandle(currentFilePath), mPath, nullptr);
+                    std::shared_ptr<TotkToolkit::UI::Items::Windows::Editors::Texts::BYML> editor = std::make_shared<TotkToolkit::UI::Items::Windows::Editors::Texts::BYML>(TotkToolkit::IO::FileHandle(mPath), mPath, nullptr);
                     if (editor->Parse())
                         TotkToolkit::UI::EditorSystem::AddEditor(editor);
                     else
-                        TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_shared<TotkToolkit::Messaging::Notices::Errors::UI::Items::Windows::Editor::ParseFailed>(currentFilePath));
+                        TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_shared<TotkToolkit::Messaging::Notices::Errors::UI::Items::Windows::Editor::ParseFailed>(mPath));
                 }
                 else if (ImGui::MenuItem("TXTG Texture")) {
-                    std::string currentFilePath = mPath;
-                    std::shared_ptr<TotkToolkit::UI::Items::Windows::Editors::TXTG> editor = std::make_shared<TotkToolkit::UI::Items::Windows::Editors::TXTG>(TotkToolkit::Resources::TexToGo::GetTXTGByFilepath(currentFilePath), mPath, nullptr);
+                    std::shared_ptr<TotkToolkit::UI::Items::Windows::Editors::TXTG> editor = std::make_shared<TotkToolkit::UI::Items::Windows::Editors::TXTG>(TotkToolkit::Resources::TexToGo::GetTXTGByFilepath(mPath), mPath, nullptr);
                     if (editor->Parse())
                         TotkToolkit::UI::EditorSystem::AddEditor(editor);
                     else
-                        TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_shared<TotkToolkit::Messaging::Notices::Errors::UI::Items::Windows::Editor::ParseFailed>(currentFilePath));
+                        TotkToolkit::Messaging::NoticeBoard::AddNotice(std::make_shared<TotkToolkit::Messaging::Notices::Errors::UI::Items::Windows::Editor::ParseFailed>(mPath));
                 }
 
                 ImGui::PopID();
@@ -99,20 +100,35 @@ namespace TotkToolkit::UI::Items::Filesystem {
         // Set the cursor back as if we never drew that invisible button
         ImGui::SetCursorPos(itemPos);
 
-        // Draw the icon
-        ImGui::PushFont(TotkToolkit::UI::Fonts::sNormalFont2x);
-        TotkToolkit::UI::ImGuiUtil::TextCentered(TotkToolkit::UI::Icons::FILE_ICON, ImGui::GetCursorPos().x, ImGui::GetCursorPos().x + width);
-        ImGui::PopFont();
+        if (mPath != "") {
+            // Draw the icon
+            ImGui::PushFont(TotkToolkit::UI::Fonts::sNormalFont2x);
+            TotkToolkit::UI::ImGuiUtil::TextCentered(TotkToolkit::UI::Icons::FILE_ICON, ImGui::GetCursorPos().x, ImGui::GetCursorPos().x + width);
+            ImGui::PopFont();
 
-        // Draw the name
-        ImGui::PushFont(TotkToolkit::UI::Fonts::sNormalFont_75x);
-        TotkToolkit::UI::ImGuiUtil::TextCenteredWrapped(filename.c_str(), ImGui::GetCursorPos().x, ImGui::GetCursorPos().x + width);
-        ImGui::PopFont();
+            // Draw the name
+            ImGui::PushFont(TotkToolkit::UI::Fonts::sNormalFont_75x);
+            TotkToolkit::UI::ImGuiUtil::TextCenteredWrapped(filename.c_str(), ImGui::GetCursorPos().x, ImGui::GetCursorPos().x + width);
+            ImGui::PopFont();
+        }
+        else {
+            // Draw the icon
+            ImGui::PushFont(TotkToolkit::UI::Fonts::sNormalFont2x);
+            TotkToolkit::UI::ImGuiUtil::TextCentered(TotkToolkit::UI::Icons::EMPTY_FILE_ICON, ImGui::GetCursorPos().x, ImGui::GetCursorPos().x + width);
+            ImGui::PopFont();
+
+            // Draw the no file text
+            ImGui::PushFont(TotkToolkit::UI::Fonts::sNormalFont_75x);
+            TotkToolkit::UI::ImGuiUtil::TextCenteredWrapped(TotkToolkit::UI::Localization::TranslationSource::GetText("[NO_FILE]"), ImGui::GetCursorPos().x, ImGui::GetCursorPos().x + width);
+            ImGui::PopFont();
+        }
 
         ImGui::EndGroup();
 
         if (!mValid)
             ImGui::EndDisabled();
+
+        ImGui::PopID();
     }
     F_F32 File::GetDefaultWidth() {
         return 4 * ImGui::GetFontSize();

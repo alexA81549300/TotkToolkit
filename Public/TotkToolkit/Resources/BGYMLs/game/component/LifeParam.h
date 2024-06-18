@@ -15,6 +15,9 @@ namespace TotkToolkit::Resources::BGYMLs::game::component {
 		virtual bool Parse() override;
 		virtual bool Serialize() override;
 
+		std::string GetBlackboardTableRefPath();
+		void SetBlackboardTableRefPath(std::string blackboardTableRefPath);
+
 		std::string GetDamageParametersPath();
 		void SetDamageParametersPath(std::string damageParameters);
 
@@ -25,6 +28,7 @@ namespace TotkToolkit::Resources::BGYMLs::game::component {
 		void SetInitInvincibilityType(std::string initInvincibilityType);
 
 	protected:
+		std::string mBlackboardTableRefPath;
 		std::string mDamageParametersPath;
 		std::string mLifeParametersPath;
 		std::string mInitInvincibilityType;

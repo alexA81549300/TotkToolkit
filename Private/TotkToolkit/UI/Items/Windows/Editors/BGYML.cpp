@@ -15,7 +15,10 @@ namespace TotkToolkit::UI::Items::Windows::Editors {
 		if (TotkToolkit::IO::Filesystem.FileExists(filepath))
 			return filepath;
 		std::filesystem::path path = filepath;
-		std::string newFilepath = path.replace_extension("b" + path.extension().generic_string()).generic_string();
+
+		std::string newFilepath = filepath;
+		if (path.extension().generic_string() == ".gyml")
+			newFilepath = path.replace_extension(".bgyml").generic_string();
 		if (TotkToolkit::IO::Filesystem.FileExists(newFilepath))
 			return newFilepath;
 
@@ -26,8 +29,8 @@ namespace TotkToolkit::UI::Items::Windows::Editors {
 			return filepath;
 		std::filesystem::path path = filepath;
 		std::string extension = path.extension().generic_string();
-		if (extension.starts_with(".b"))
-			extension = extension.erase(1);
+		if (extension == ".bgyml")
+			extension = ".gyml";
 		std::string newFilepath = path.replace_extension(extension).generic_string();
 		if (TotkToolkit::IO::Filesystem.FileExists(newFilepath))
 			return newFilepath;

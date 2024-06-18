@@ -18,6 +18,7 @@ namespace TotkToolkit::UI::Items::Windows::Editors::BGYMLs::game::component {
 			return false;
 
 		mParentHolder = std::make_shared<TotkToolkit::UI::Items::Filesystem::FileHolder>(TotkToolkit::UI::Items::Filesystem::File(ConvertPathToReal(mLifeParam->GetParentPath())));
+		mBlackboardTableRefHolder = std::make_shared<TotkToolkit::UI::Items::Filesystem::FileHolder>(TotkToolkit::UI::Items::Filesystem::File(ConvertPathToReal(mLifeParam->GetBlackboardTableRefPath())));
 		mDamageParametersHolder = std::make_shared<TotkToolkit::UI::Items::Filesystem::FileHolder>(TotkToolkit::UI::Items::Filesystem::File(ConvertPathToReal(mLifeParam->GetDamageParametersPath())));
 		mLifeParametersHolder = std::make_shared<TotkToolkit::UI::Items::Filesystem::FileHolder>(TotkToolkit::UI::Items::Filesystem::File(ConvertPathToReal(mLifeParam->GetLifeParametersPath())));
 
@@ -25,6 +26,7 @@ namespace TotkToolkit::UI::Items::Windows::Editors::BGYMLs::game::component {
 	}
 	bool LifeParam::Serialize() {
 		mLifeParam->SetParentPath(ConvertPathToVirtual(mParentHolder->GetFile().GetPath()));
+		mLifeParam->SetBlackboardTableRefPath(mBlackboardTableRefHolder->GetFile().GetPath());
 		mLifeParam->SetDamageParametersPath(ConvertPathToVirtual(mDamageParametersHolder->GetFile().GetPath()));
 		mLifeParam->SetLifeParametersPath(ConvertPathToVirtual(mLifeParametersHolder->GetFile().GetPath()));
 
@@ -56,6 +58,19 @@ namespace TotkToolkit::UI::Items::Windows::Editors::BGYMLs::game::component {
 
 				ImGui::PushItemWidth(ImGui::GetColumnWidth());
 				mParentHolder->Draw();
+				ImGui::PopItemWidth();
+			}
+			if (mBlackboardTableRefHolder) {
+				ImGui::TableNextRow();
+				ImGui::TableSetColumnIndex(0);
+
+				ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetColumnWidth() - ImGui::CalcTextSize("BlackboardTableRef").x);
+				ImGui::Text("BlackboardTableRef");
+
+				ImGui::TableSetColumnIndex(1);
+
+				ImGui::PushItemWidth(ImGui::GetColumnWidth());
+				mBlackboardTableRefHolder->Draw();
 				ImGui::PopItemWidth();
 			}
 			if (mDamageParametersHolder) {
