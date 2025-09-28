@@ -7,7 +7,7 @@ chmod +x ./.devcontainer/install-devkitpro-pacman.sh
 sudo ./.devcontainer/install-devkitpro-pacman.sh
 printf "\n y" | sudo dkp-pacman -S switch-dev
 printf "\n y" | sudo dkp-pacman -S switch-mesa
-echo 'export DEVKITPRO=/opt/devkitpro' >> ~/.bashrc
+echo 'export DEVKITPRO=/opt/devkitpro' >>~/.bashrc
 
 sudo apt install libxrandr-dev -y
 sudo apt install libxinerama-dev -y

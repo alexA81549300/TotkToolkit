@@ -15,7 +15,7 @@ fi
 
 # Add the devkitPro apt repository if we don't have it set up already
 if ! [ -f /etc/apt/sources.list.d/devkitpro.list ]; then
-  echo "deb [signed-by=/usr/local/share/keyring/devkitpro-pub.gpg] https://apt.devkitpro.org stable main" > /etc/apt/sources.list.d/devkitpro.list
+  echo "deb [signed-by=/usr/local/share/keyring/devkitpro-pub.gpg] https://apt.devkitpro.org stable main" >/etc/apt/sources.list.d/devkitpro.list
 fi
 
 # Finally install devkitPro pacman

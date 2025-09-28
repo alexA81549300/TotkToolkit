@@ -2,4 +2,14 @@ out/
 .vs/
 .vscode/
 CMakeUserPresets.json
-Work/
+Work/# Hermes guard
+backups/
+logs/
+*.tar
+*.tar.*
+*.zip
+*.zst
+*.gz
+*.tmp
+*.swp
+*.swo
